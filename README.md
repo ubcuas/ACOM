@@ -10,17 +10,11 @@ See the full documentation on UAS confluence [here](http://confluence.ubcuas.com
 ## Setup
 ** Building using docker:**
 
-- First, install `docker`
-- Second, run the build command
+- First, install `docker` and `docker-compose`
+- Second, to start the project run the following in the project base directory:
 
 ```shell
-    $ sudo docker build -t acom:latest .
-```
-
-## Running - docker
-
-```shell
-    $ sudo docker run -d -p 5000:5000 acom
+    $ sudo docker-compose up
 ```
 
 **Server URL**
