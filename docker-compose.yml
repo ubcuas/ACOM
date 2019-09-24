@@ -8,5 +8,32 @@ services:
       FLASK_DEBUG: 1
     ports: 
       - 5000:5000
+    networks:
+      acomnet:
+        ipv4_address: 172.18.0.2
+    depends_on:
+      - sitl
     volumes: 
       - ./:/app
+
+  sitl:
+    image: radarku/sitl-swarm
+    environment:
+      NUMCOPTERS: 1
+      # Set location to UBC thunderbird field
+      LAT: 149.259223
+      LON: -123.2415589
+      ALT: 96
+    ports:
+      - 5760:5760
+    networks:
+      acomnet:
+        ipv4_address: 172.18.0.3
+
+
+networks:
+  acomnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
