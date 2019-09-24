@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, abort, Response
+from flask import Blueprint, request, jsonify, abort, Response, current_app
 from pymavlink import mavutil
 import logging
 
@@ -10,10 +10,10 @@ mavlink_connection = None
 def setup_mavlink_connection():
     global mavlink_connection
     if mavlink_connection == None or mavlink_connection.target_system < 1:
-        app.logger.info("Mavlink connection is now being initialized")
+        current_app.logger.info("Mavlink connection is now being initialized")
         mavlink_connection = mavutil.mavlink_connection('tcp:172.18.0.3:5760')
         mavlink_connection.wait_heartbeat(timeout=3)
-        app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_system))
+        current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_system))
     if mavlink_connection.target_system < 1:
         abort(400, "Mavlink is not connected")
 
@@ -24,7 +24,7 @@ def aircraft_reroute():
     global mavlink_connection
     testRetr = mavlink_connection.recv_match()
     if testRetr != None:
-        app.logger.info(testRetr.to_dict())
+        current_app.logger.info(testRetr.to_dict())
     # waypoints = request.data
     return request.data
 
