@@ -1,13 +1,20 @@
 from flask import Flask
 from routes.aircraft.controllers import aircraft
+from auth.require_apikey import require_apikey
 
 # Create app
 app = Flask(__name__)
 
 # Home route
-@app.route('/')  
+@app.route('/')
 def index():
     return "This is the index route."
+
+# Protected route
+@app.route('/protected', methods = ['POST', 'GET'])
+@require_apikey
+def protected():
+    return "This is a protected route!!"
 
 # Declare routes
 app.register_blueprint(aircraft, url_prefix='/aircraft')
