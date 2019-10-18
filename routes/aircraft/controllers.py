@@ -59,7 +59,6 @@ def aircraft_telemetry(message_name):
     else:
         attributes = mavlink_msg_dict.get_message_attrs(message_name)
         for attr in attributes:
-            current_app.logger.info("The attr %s val is %s", attr, getattr(msg,attr))
             msg_data[attr] = getattr(msg, attr)
 
     # jsonify msg_data
