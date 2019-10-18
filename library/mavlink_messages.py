@@ -1,4 +1,5 @@
 import xmltodict
+import os 
 
 # A class that parses the Mavlink messages definitions
 # Source: https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/common.xml
@@ -6,7 +7,9 @@ class MavlinkMessage:
     mavlink_messages = {}
 
     def __init__(self):
-        with open('../resources/mavlink_messages_v1.0.xml', 'r') as fd:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        project_path = os.path.dirname(dir_path)
+        with open(os.path.join(project_path, 'resources/mavlink_messages_v1.0.xml'), 'r') as fd:
             self.mavlink_messages = xmltodict.parse(fd.read())
 
     # returns the attributes of the message of interest
