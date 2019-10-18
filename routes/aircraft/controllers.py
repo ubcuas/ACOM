@@ -57,7 +57,7 @@ def aircraft_telemetry(message_name):
     if msg.get_type() == "BAD_DATA":
         return {'error': 'Bad data retrieved'}
     else:
-        attributes = mavlink_msg_dict.get_message_attr(message_name)
+        attributes = mavlink_msg_dict.get_message_attrs(message_name)
         for attr in attributes:
             current_app.logger.info("The attr %s val is %s", attr, getattr(msg,attr))
             msg_data[attr] = getattr(msg, attr)

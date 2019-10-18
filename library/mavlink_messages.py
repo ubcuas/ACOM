@@ -14,7 +14,7 @@ class MavlinkMessage:
 
     # returns the attributes of the message of interest
     # Example: get_message_attr('GPS_RAW_INT') -> ['time_usec', 'fix_type', 'lat', 'lon', 'alt' ...]
-    def get_message_attr(self, message_name):
+    def get_message_attrs(self, message_name):
         messages = self.mavlink_messages['mavlink']['messages']['message']
         result_list = []
         # iterate through the messages tree
