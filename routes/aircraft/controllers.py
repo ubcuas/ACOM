@@ -6,7 +6,6 @@ import logging
 
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
-mavlink_msg_dict = mavlink_messages.MavlinkMessage()
 debug = False # Set to True in order to bypass authentication and mavlink connection
 
 # Ensure mavlink connection is created before sending requests
@@ -30,19 +29,76 @@ def aircraft_reroute():
     return request.data
 
 # Changes the flight mode of the aircraft
-@aircraft.route('/flightmode', methods=['POST'])
-def aircraft_flightmode():
-    return None
+@aircraft.route('/flightmode/<mav_mode>', methods=['POST'])
+def aircraft_flightmode(mav_mode):
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_DO_SET_MODE,
+        int(mav_mode),
+        0, 0, 0, 0, 0, 0, 0  # unused parameters
+    )
+    return aircraft_telemetry('HEARTBEAT')
 
-# Arms or disarms the aircraft
-@aircraft.route('/arm', methods=['POST'])
+# Arms the aircraft
+@aircraft.route('/arm', methods=['PUT'])
 def aircraft_arm():
-    return None
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+        0, # confirmation
+        1, # arm
+        0, 0, 0, 0, 0, 0  # unused parameters
+    )
+    return aircraft_telemetry('HEARTBEAT')
 
-# Manual control
+# Disarms the aircraft
+@aircraft.route('/disarm', methods=['PUT'])
+def aircraft_disarm():
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+        0, # confirmation
+        0, # disarm
+        0, 0, 0, 0, 0, 0 # unused parameters
+    )
+    return aircraft_telemetry('HEARTBEAT')
+
+# RTL
+@aircraft.route('/rtl', methods=['PUT'])
+def aircraft_rtl():
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
+        0, 0, 0, 0, 0, 0, 0, 0 # unused parameters
+    )
+    return aircraft_telemetry('GPS_RAW_INT')
+
+# Manual control / Fly-to
 @aircraft.route('/manual', methods=['POST'])
 def aircraft_manual():
-    return None
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+        request.json['hold'],
+        request.json['accept_radius'],
+        request.json['pass_radius'],
+        request.json['yaw'],
+        request.json['lat'],
+        request.json['lon'],
+        request.json['alt'],
+        0
+    )
+    return aircraft_telemetry('GPS_RAW_INT')
 
 # Request telemetry data based on mavlink message names
 # Example: /aircraft/telemetry/GPS_RAW_INT
@@ -57,9 +113,8 @@ def aircraft_telemetry(message_name):
     if msg.get_type() == "BAD_DATA":
         return {'error': 'Bad data retrieved'}
     else:
-        attributes = mavlink_msg_dict.get_message_attr(message_name)
+        attributes = msg._fieldnames
         for attr in attributes:
-            current_app.logger.info("The attr %s val is %s", attr, getattr(msg,attr))
             msg_data[attr] = getattr(msg, attr)
 
     # jsonify msg_data
