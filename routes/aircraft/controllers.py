@@ -6,7 +6,6 @@ import logging
 
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
-mavlink_msg_dict = mavlink_messages.MavlinkMessage()
 debug = False # Set to True in order to bypass authentication and mavlink connection
 
 # Ensure mavlink connection is created before sending requests
@@ -114,7 +113,7 @@ def aircraft_telemetry(message_name):
     if msg.get_type() == "BAD_DATA":
         return {'error': 'Bad data retrieved'}
     else:
-        attributes = mavlink_msg_dict.get_message_attrs(message_name)
+        attributes = msg._fieldnames
         for attr in attributes:
             msg_data[attr] = getattr(msg, attr)
 
