@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify, abort, Response, current_app
 from pymavlink import mavutil
-from library import mavlink_messages
 import json
 import logging
 import os
