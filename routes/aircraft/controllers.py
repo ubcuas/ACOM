@@ -3,16 +3,18 @@ from pymavlink import mavutil
 from library import mavlink_messages
 import json
 import logging
+import os
 
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
-debug = False # Set to True in order to bypass authentication and mavlink connection
+
+MAVLINK_SETUP_DEBUG = os.getenv('MAVLINK_SETUP_DEBUG')
 
 # Ensure mavlink connection is created before sending requests
 @aircraft.before_request
 def setup_mavlink_connection():
     global mavlink_connection
-    if not debug:
+    if 'development' not in MAVLINK_SETUP_DEBUG:
         # TODO: Add a check to make sure connection is valid
         if mavlink_connection == None or mavlink_connection.target_system < 1:
             current_app.logger.info("Mavlink connection is now being initialized")
