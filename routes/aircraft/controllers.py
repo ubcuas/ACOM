@@ -72,7 +72,7 @@ def aircraft_disarm():
 
 # RTL
 @aircraft.route('/rtl', methods=['PUT'])
-def aircraft_disarm():
+def aircraft_rtl():
     global mavlink_connection
     mavlink_connection.mav.command_long_send(
         mavlink_connection.target_system,
