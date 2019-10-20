@@ -6,18 +6,18 @@ services:
       dockerfile: Dockerfile
     environment:
       FLASK_DEBUG: 1
-    ports: 
+    ports:
       - 5000:5000
     networks:
       acomnet:
         ipv4_address: 172.18.0.2
     depends_on:
       - sitl
-    volumes: 
+    volumes:
       - ./:/app
 
   sitl:
-    image: radarku/sitl-swarm
+    image: ubcuas/uasitl:latest
     environment:
       NUMCOPTERS: 1
       # Set location to UBC thunderbird field
@@ -25,7 +25,7 @@ services:
       LON: -123.2415589
       ALT: 96
     ports:
-      - 5760:5760
+      - 5760-5780:5760-5780
     networks:
       acomnet:
         ipv4_address: 172.18.0.3
