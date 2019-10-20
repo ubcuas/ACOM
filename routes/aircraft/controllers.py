@@ -17,7 +17,7 @@ def setup_mavlink_connection():
         # TODO: Add a check to make sure connection is valid
         if mavlink_connection == None or mavlink_connection.target_system < 1:
             current_app.logger.info("Mavlink connection is now being initialized")
-            mavlink_connection = mavutil.mavlink_connection('udp:127.0.0.1:14550')
+            mavlink_connection = mavutil.mavlink_connection('tcp:172.18.0.3:5760')
             mavlink_connection.wait_heartbeat(timeout=3)
             current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_system))
         if mavlink_connection.target_system < 1:
