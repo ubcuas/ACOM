@@ -110,9 +110,9 @@ def aircraft_telemetry(message_name):
     msg_data = {}
 
     if not msg:
-        return {'error': 'Invalid message name'}
+        return json.dumps({'error': 'Invalid message name'})
     if msg.get_type() == "BAD_DATA":
-        return {'error': 'Bad data retrieved'}
+        return json.dumps({'error': 'Bad data retrieved'})
     else:
         attributes = msg._fieldnames
         for attr in attributes:
