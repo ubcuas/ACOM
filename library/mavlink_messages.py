@@ -25,3 +25,14 @@ class MavlinkMessage:
                     result_list.append(field['@name'])
 
         return result_list
+
+    # returns the message id
+    # Example: get_message_id('GPS_RAW_INT') -> 24
+    def get_message_id(self, message_name):
+        messages = self.mavlink_messages['mavlink']['messages']['message']
+        # iterate through the messages tree
+        for message in messages:
+            if message['@name'] == message_name:
+                return message['@id']
+
+        return None

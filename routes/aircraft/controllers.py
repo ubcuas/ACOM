@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, abort, Response, current_app
 from pymavlink import mavutil
+from library.util import parseRequest
 import json
 import logging
 import os
@@ -19,7 +20,11 @@ def setup_mavlink_connection():
             current_app.logger.info("Mavlink connection is now being initialized")
             mavlink_connection = mavutil.mavlink_connection('tcp:172.18.0.3:5760')
             mavlink_connection.wait_heartbeat(timeout=3)
-            current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_system))
+            current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_component))
+            
+            # request all data type streams
+            mavlink_connection.mav.request_data_stream_send(mavlink_connection.target_system, mavlink_connection.target_component,
+                                                    mavutil.mavlink.MAV_DATA_STREAM_ALL, 1, 1)
         if mavlink_connection.target_system < 1:
             abort(400, "Mavlink is not connected")
 
@@ -29,84 +34,128 @@ def setup_mavlink_connection():
 def aircraft_reroute():
     return request.data
 
-# Changes the flight mode of the aircraft
-@aircraft.route('/flightmode/<mav_mode>', methods=['POST'])
-def aircraft_flightmode(mav_mode):
-    global mavlink_connection
-    mavlink_connection.mav.command_long_send(
-        mavlink_connection.target_system,
-        mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_DO_SET_MODE,
-        int(mav_mode),
-        0, 0, 0, 0, 0, 0, 0  # unused parameters
-    )
-    return aircraft_telemetry('HEARTBEAT')
-
 # Arms the aircraft
 @aircraft.route('/arm', methods=['PUT'])
 def aircraft_arm():
     global mavlink_connection
-    mavlink_connection.mav.command_long_send(
-        mavlink_connection.target_system,
-        mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-        0, # confirmation
-        1, # arm
-        0, 0, 0, 0, 0, 0  # unused parameters
-    )
-    return aircraft_telemetry('HEARTBEAT')
+    mavlink_connection.arducopter_arm()
+    return aircraft_heartbeat()
 
 # Disarms the aircraft
 @aircraft.route('/disarm', methods=['PUT'])
 def aircraft_disarm():
     global mavlink_connection
-    mavlink_connection.mav.command_long_send(
-        mavlink_connection.target_system,
-        mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
-        0, # confirmation
-        0, # disarm
-        0, 0, 0, 0, 0, 0 # unused parameters
-    )
-    return aircraft_telemetry('HEARTBEAT')
+    mavlink_connection.arducopter_disarm()
+    return aircraft_heartbeat()
 
 # RTL
 @aircraft.route('/rtl', methods=['PUT'])
 def aircraft_rtl():
     global mavlink_connection
-    mavlink_connection.mav.command_long_send(
-        mavlink_connection.target_system,
-        mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH,
-        0, 0, 0, 0, 0, 0, 0, 0 # unused parameters
-    )
-    return aircraft_telemetry('GPS_RAW_INT')
+    mavlink_connection.set_mode_rtl()
+    return aircraft_heartbeat()
 
-# Manual control / Fly-to
-@aircraft.route('/manual', methods=['POST'])
+# set mode manual
+@aircraft.route('/manual', methods=['PUT'])
 def aircraft_manual():
     global mavlink_connection
+    mavlink_connection.set_mode_manual()
+    return aircraft_heartbeat()
+
+# set mode to auto
+@aircraft.route('/auto', methods=['PUT'])
+def aircraft_auto():
+    global mavlink_connection
+    mavlink_connection.set_mode_auto()
+    return aircraft_heartbeat()
+
+# set mode to guided
+@aircraft.route('/guided', methods=['PUT'])
+def aircraft_guided():
+    global mavlink_connection
+    mavlink_connection.set_mode('GUIDED')
+    return aircraft_heartbeat()
+
+# Request gps data
+@aircraft.route('/telemetry/gps', methods=['GET'])
+def aircraft_gps():
+    global mavlink_connection
+    location = mavlink_connection.location()
+    return json.dumps(location.__dict__)
+
+# Request heartbeat data
+@aircraft.route('/telemetry/heartbeat', methods=['GET'])
+def aircraft_heartbeat():
+    global mavlink_connection
+    hb = mavlink_connection.wait_heartbeat()
+    hb_data = {}
+
+    if not hb:
+        return {'error': 'Failed to retrieve heartbeat'}
+    if hb.get_type() == "BAD_DATA":
+        return {'error': 'Bad data retrieved'}
+    else:
+        attributes = hb._fieldnames
+        for attr in attributes:
+            hb_data[attr] = getattr(hb, attr)
+
+    # jsonify hb_data
+    return json.dumps(hb_data)
+
+# Guided control / Fly-to
+@aircraft.route('/flyto', methods=['POST'])
+def aircraft_flyto():
+    global mavlink_connection
+    frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
+    mavlink_connection.mav.mission_item_send(0, 0, 0, frame,
+        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+        2, # current wp - guided command
+        0, 
+        0,
+        0, 
+        0, 
+        0, 
+        parseRequest(request, 'lat', 0),
+        parseRequest(request, 'lng', 0),
+        parseRequest(request, 'alt', 0)
+    )
+    return aircraft_heartbeat()
+
+# Guided control / Take-off
+@aircraft.route('/takeoff', methods=['POST'])
+def aircraft_takeoff():
+    global mavlink_connection
     mavlink_connection.mav.command_long_send(
         mavlink_connection.target_system,
         mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-        request.json['hold'],
-        request.json['accept_radius'],
-        request.json['pass_radius'],
-        request.json['yaw'],
-        request.json['lat'],
-        request.json['lon'],
-        request.json['alt'],
+        mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0,
+        parseRequest(request, 'pitch', 0),
+        0,
+        0,
+        parseRequest(request, 'yaw', 0),
+        parseRequest(request, 'lat', 0),
+        parseRequest(request, 'lng', 0),
+        request.json['alt']
+    )
+    return aircraft_heartbeat()
+
+@aircraft.route('/home_position', methods=['GET'])
+def aircraft_home_position():
+    global mavlink_connection
+    mavlink_connection.mav.command_long_send(
+        mavlink_connection.target_system,
+        mavlink_connection.target_component,
+        mavutil.mavlink.MAV_CMD_GET_HOME_POSITION, 
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0
     )
-    return aircraft_telemetry('GPS_RAW_INT')
-
-# Request telemetry data based on mavlink message names
-# Example: /aircraft/telemetry/GPS_RAW_INT
-@aircraft.route('/telemetry/<message_name>', methods=['GET'])
-def aircraft_telemetry(message_name):
-    global mavlink_connection
-    msg = mavlink_connection.recv_match(type=message_name)
+    msg = mavlink_connection.recv_match(type='HOME_POSITION')
     msg_data = {}
 
     if not msg:
