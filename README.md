@@ -8,13 +8,19 @@ Air Communcation (ACOM) is the aircrafts’ on-board software that will be accep
 See the full documentation on UAS confluence [here](http://confluence.ubcuas.com/display/GCOM/ACOM+Documentation) (Note: You have to be using ubcsecure or the UBC VPN in order to access.)
 
 ## Setup
-** Building using docker:**
+### Building using docker:
 
 - First, install `docker` and `docker-compose`
 - Second, to start the project run the following in the project base directory:
 
 ```shell
     $ sudo docker-compose up
+```
+
+## Testing
+- Run tests for the whole ACOM flask server:
+```shell
+    sudo docker-compose run flask pytest`
 ```
 
 **Server URL**

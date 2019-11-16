@@ -20,6 +20,4 @@ RUN pip install -r requirements.txt
 # copy everything else
 COPY . .
 
-# app execution
-ENTRYPOINT ["python"]
-CMD ["app.py"]
+STOPSIGNAL SIGINT

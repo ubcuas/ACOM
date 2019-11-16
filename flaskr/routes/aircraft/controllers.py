@@ -1,20 +1,17 @@
 from flask import Blueprint, request, jsonify, abort, Response, current_app
 from pymavlink import mavutil
-from library.util import parseRequest
+from flaskr.library.util import parseRequest
 import json
 import logging
-import os
 
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
-
-MAVLINK_SETUP_DEBUG = os.getenv('MAVLINK_SETUP_DEBUG')
 
 # Ensure mavlink connection is created before sending requests
 @aircraft.before_request
 def setup_mavlink_connection():
     global mavlink_connection
-    if 'development' not in MAVLINK_SETUP_DEBUG:
+    if 'development' not in current_app.config['MAVLINK_SETUP_DEBUG']:
         # TODO: Add a check to make sure connection is valid
         if mavlink_connection == None or mavlink_connection.target_system < 1:
             current_app.logger.info("Mavlink connection is now being initialized")

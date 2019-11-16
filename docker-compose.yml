@@ -1,11 +1,14 @@
 version: "3"
 services:
-  web:
+  flask:
     build:
-      context: .
+      context: ./flaskr
       dockerfile: Dockerfile
     environment:
-      FLASK_DEBUG: 1
+      FLASK_APP: flaskr
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_ENV: development
+    command: [ "flask", "run" ]
     tty: true
     ports:
       - 5000:5000
