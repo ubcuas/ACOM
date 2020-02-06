@@ -178,7 +178,7 @@ def aircraft_home_position():
     return json.dumps(msg_data)
 
 # upload mission waypoints
-@aircraft.route('/mission/upload', methods=['POST'])
+@aircraft.route('/mission', methods=['POST'])
 def upload_mission_wps():
     global waypoint_loader
     global mavlink_connection
@@ -239,7 +239,7 @@ def upload_mission_wps():
         return jsonify({ "msg": "Waypoints failed to upload." }), 401
 
 # download mission waypoints
-@aircraft.route('/mission/download', methods=['GET'])
+@aircraft.route('/mission', methods=['GET'])
 def download_mission_wps():
     global waypoint_loader
     mavlink_connection.waypoint_request_list_send()
@@ -265,7 +265,7 @@ def download_mission_wps():
         next_wp = mavlink_connection.recv_match(type='MISSION_ITEM', blocking=True, timeout=15)
         if next_wp is not None:
             wp_json = {"lat": next_wp.x, "lng": next_wp.y, "alt": next_wp.z}
-            print(wp_json)
+            # print(wp_json)
             wps.append(wp_json)
 
         if stored is None or (next_wp and stored.seq != next_wp.seq):
@@ -278,7 +278,7 @@ def download_mission_wps():
         # print('getting next waypoint: ', next_wp.seq + 1)
         mavlink_connection.waypoint_request_send(next_wp.seq + 1)
     
-    return jsonify({ "wps": wps}), 200
+    return jsonify({ "wps": wps}), 201
 
 ## Helpers
 def set_message_interval(messageid, interval):
