@@ -29,6 +29,21 @@ Build ARM:
   script:
     - docker-compose build --parallel
 
+# Test ARM:
+#   stage: test
+#   tags:
+#     - ubcuas
+#     - arm
+#   script:
+#     - docker-compose run flask pytest
+
+Test x64:
+  stage: test
+  tags:
+    - docker
+  script:
+    - docker-compose run flask pytest
+
 Final:
   stage: deploy
   script:

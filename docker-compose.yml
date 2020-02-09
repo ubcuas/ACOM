@@ -14,7 +14,7 @@ services:
       - 5000:5000
     networks:
       acomnet:
-        ipv4_address: 172.18.0.2
+        ipv4_address: 164.2.0.2
     depends_on:
       - sitl
     volumes:
@@ -33,7 +33,7 @@ services:
       - 5760-5780:5760-5780
     networks:
       acomnet:
-        ipv4_address: 172.18.0.3
+        ipv4_address: 164.2.0.3
 
 
 networks:
@@ -41,4 +41,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.18.0.0/16
+        - subnet: 164.2.0.0/16
