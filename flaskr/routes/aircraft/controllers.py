@@ -8,32 +8,29 @@ import time
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
 waypoint_loader = None
+ip_address = None
+port = None
 
-# Ensure mavlink connection is created before sending requests
-@aircraft.before_request
-def setup_mavlink_connection():
-    global mavlink_connection
-    global waypoint_loader
-    if 'development' not in current_app.config['MAVLINK_SETUP_DEBUG']:
-        # TODO: Add a check to make sure connection is valid
-        if mavlink_connection == None or mavlink_connection.target_system < 1:
-            current_app.logger.info("Mavlink connection is now being initialized")
-            mavlink_connection = mavutil.mavlink_connection('tcp:172.18.0.3:5760')
-            mavlink_connection.wait_heartbeat(timeout=3)
-            current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_component))
-            
-            # request all data type streams
-            mavlink_connection.mav.request_data_stream_send(mavlink_connection.target_system, mavlink_connection.target_component,
-                                                    mavutil.mavlink.MAV_DATA_STREAM_ALL, 1, 1)
-            
-            # command data stream
-            set_message_interval(24, 1) # gps
-            set_message_interval(0, 1) # heartbeat
+@aircraft.route('/connect', methods=['POST'])
+def aircraft_connect():
+    global ip_address, port
 
-            # initialize waypointloader
-            waypoint_loader = mavwp.MAVWPLoader(target_system=mavlink_connection.target_system, target_component=mavlink_connection.target_component)
-        if mavlink_connection.target_system < 1:
-            abort(400, "Mavlink is not connected")
+    connectionRequest = request.json
+
+    if 'ipAddress' not in connectionRequest:
+        return jsonify({"error": "IP address was not specified"}), 401
+    
+    if 'port' not in connectionRequest:
+        return jsonify({"error": "Port was not specified"}), 402
+
+    # set the ip address and port to the aircraft
+    ip_address = connectionRequest['ipAddress']
+    port = connectionRequest['port']
+
+    # initialize the mavlink connection
+    setup_mavlink_connection()
+
+    return jsonify({"msg": "Connected to the aircraft successfully"}), 201
 
 # Recieves an array of waypoints
 # Interrupts aircraft auto mode, switches to guided, runs waypoints, then returns to auto
@@ -46,49 +43,49 @@ def aircraft_reroute():
 def aircraft_arm():
     global mavlink_connection
     mavlink_connection.arducopter_arm()
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # Disarms the aircraft
 @aircraft.route('/disarm', methods=['PUT'])
 def aircraft_disarm():
     global mavlink_connection
     mavlink_connection.arducopter_disarm()
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # RTL
 @aircraft.route('/rtl', methods=['PUT'])
 def aircraft_rtl():
     global mavlink_connection
     mavlink_connection.set_mode_rtl()
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # set mode manual
 @aircraft.route('/manual', methods=['PUT'])
 def aircraft_manual():
     global mavlink_connection
     mavlink_connection.set_mode_manual()
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # set mode to auto
 @aircraft.route('/auto', methods=['PUT'])
 def aircraft_auto():
     global mavlink_connection
     mavlink_connection.set_mode_auto()
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # set mode to guided
 @aircraft.route('/guided', methods=['PUT'])
 def aircraft_guided():
     global mavlink_connection
     mavlink_connection.set_mode('GUIDED')
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # Request gps data
 @aircraft.route('/telemetry/gps', methods=['GET'])
 def aircraft_gps():
     global mavlink_connection
     location = mavlink_connection.location()
-    return json.dumps(location.__dict__)
+    return jsonify(json.dumps(location.__dict__)), 201
 
 # Request heartbeat data
 @aircraft.route('/telemetry/heartbeat', methods=['GET'])
@@ -107,7 +104,7 @@ def aircraft_heartbeat():
             hb_data[attr] = getattr(hb, attr)
 
     # jsonify hb_data
-    return json.dumps(hb_data)
+    return jsonify(json.dumps(hb_data)), 201
 
 # Guided control / Fly-to
 @aircraft.route('/flyto', methods=['POST'])
@@ -126,7 +123,7 @@ def aircraft_flyto():
         parseRequest(request, 'lng', 0),
         parseRequest(request, 'alt', 0)
     )
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 # Guided control / Take-off
 @aircraft.route('/takeoff', methods=['POST'])
@@ -144,7 +141,7 @@ def aircraft_takeoff():
         parseRequest(request, 'lng', 0),
         request.json['alt']
     )
-    return aircraft_heartbeat()
+    return jsonify(aircraft_heartbeat()), 201
 
 @aircraft.route('/home_position', methods=['GET'])
 def aircraft_home_position():
@@ -175,7 +172,7 @@ def aircraft_home_position():
             msg_data[attr] = getattr(msg, attr)
 
     # jsonify msg_data
-    return json.dumps(msg_data)
+    return jsonify(json.dumps(msg_data)), 201
 
 # upload mission waypoints
 @aircraft.route('/mission', methods=['POST'])
@@ -329,6 +326,30 @@ def download_mission_wps():
     return jsonify({ "homePos": homePos, "rtl": rtl, "takeoffAlt": takeoffAlt, "wps": wps}), 201
 
 ## Helpers
+
+# Ensure mavlink connection is created before sending requests
+def setup_mavlink_connection():
+    global mavlink_connection, waypoint_loader, ip_address, port
+    
+    if 'development' not in current_app.config['MAVLINK_SETUP_DEBUG']:
+        if mavlink_connection == None or mavlink_connection.target_system < 1:
+            current_app.logger.info("Mavlink connection is now being initialized")
+            mavlink_connection = mavutil.mavlink_connection('tcp:' + ip_address + ':' + str(port))
+            mavlink_connection.wait_heartbeat(timeout=3)
+            current_app.logger.info("Heartbeat from system (system %u component %u)" % (mavlink_connection.target_system, mavlink_connection.target_component))
+            
+            # request all data type streams
+            mavlink_connection.mav.request_data_stream_send(mavlink_connection.target_system, mavlink_connection.target_component,
+                                                    mavutil.mavlink.MAV_DATA_STREAM_ALL, 1, 1)
+            
+            # command data stream
+            set_message_interval(24, 1) # gps
+            set_message_interval(0, 1) # heartbeat
+
+            # initialize waypointloader
+            waypoint_loader = mavwp.MAVWPLoader(target_system=mavlink_connection.target_system, target_component=mavlink_connection.target_component)
+        if mavlink_connection.target_system < 1:
+            abort(400, "Mavlink is not connected")
 
 # set a message interval for a specific mavlink message
 def set_message_interval(messageid, interval):
