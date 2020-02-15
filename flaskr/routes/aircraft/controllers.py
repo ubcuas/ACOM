@@ -197,10 +197,10 @@ def upload_mission_wps():
 
     # error checking
     if missionRequest:
-        if not missionRequest['wps']:
+        if 'wps' not in missionRequest or not missionRequest['wps']:
             return jsonify({ "error": "No waypoints were given" }), 402
 
-        if not missionRequest['takeoffAlt']:
+        if 'takeoffAlt' not in missionRequest:
             return jsonify({ "error": "Takeoff altitude was not given" }), 403
         elif missionRequest['takeoffAlt'] <= 0:
             return jsonify({ "error": "Takeoff altitude must be >0" }), 404
