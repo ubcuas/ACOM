@@ -12,11 +12,22 @@ def setUp():
 
 # Single test case to ensure checkConnection is ran first
 def testUploadDownload(setUp):
+    checkPrematureAction(setUp)
     checkConnection(setUp)
     checkUploadNull(setUp)
     checkUploadEmpty(setUp)
-    checkUploadDownloadNonEmpty(setUp)
     checkInvalidTakeOffAlt(setUp)
+    checkUploadDownloadNonEmpty(setUp)
+
+def checkPrematureAction(setUp):
+    global mission_endpoint
+    nullMission = None;
+
+    # upload wp set
+    response = setUp.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
+
+    # confirm failure - connection not established
+    assert response.status_code == 400
 
 def checkConnection(setUp):
     global connect_endpoint
@@ -35,7 +46,7 @@ def checkUploadNull(setUp):
     responseData = json.loads(response.data)
 
     # confirm failure - invalid format
-    assert response.status_code == 400
+    assert response.status_code == 405
 
 def checkUploadEmpty(setUp):
     global mission_endpoint

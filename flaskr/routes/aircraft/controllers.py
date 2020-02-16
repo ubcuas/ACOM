@@ -4,6 +4,7 @@ from flaskr.library.util import parseRequest, parseJson
 import json
 import logging
 import time
+from functools import wraps
 
 aircraft = Blueprint('aircraft', __name__)
 mavlink_connection = None
@@ -11,6 +12,20 @@ waypoint_loader = None
 ip_address = None
 port = None
 
+# decorator that checks if a mavlink connection has been established
+def connection_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        global mavlink_connection, waypoint_loader
+        
+        if mavlink_connection is None or waypoint_loader is None:
+            return jsonify({"error": "Aircraft connection has not been established"}), 400
+        else:
+            return f(*args, **kwargs)
+   
+    return wrap
+
+# sets and establishes a mavlink connection
 @aircraft.route('/connect', methods=['POST'])
 def aircraft_connect():
     global ip_address, port
@@ -35,60 +50,69 @@ def aircraft_connect():
 # Recieves an array of waypoints
 # Interrupts aircraft auto mode, switches to guided, runs waypoints, then returns to auto
 @aircraft.route('/reroute', methods=['POST'])
+@connection_required
 def aircraft_reroute():
     return request.data
 
 # Arms the aircraft
 @aircraft.route('/arm', methods=['PUT'])
+@connection_required
 def aircraft_arm():
     global mavlink_connection
     mavlink_connection.arducopter_arm()
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # Disarms the aircraft
 @aircraft.route('/disarm', methods=['PUT'])
+@connection_required
 def aircraft_disarm():
     global mavlink_connection
     mavlink_connection.arducopter_disarm()
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # RTL
 @aircraft.route('/rtl', methods=['PUT'])
+@connection_required
 def aircraft_rtl():
     global mavlink_connection
     mavlink_connection.set_mode_rtl()
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # set mode manual
 @aircraft.route('/manual', methods=['PUT'])
+@connection_required
 def aircraft_manual():
     global mavlink_connection
     mavlink_connection.set_mode_manual()
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # set mode to auto
 @aircraft.route('/auto', methods=['PUT'])
+@connection_required
 def aircraft_auto():
     global mavlink_connection
     mavlink_connection.set_mode_auto()
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # set mode to guided
 @aircraft.route('/guided', methods=['PUT'])
+@connection_required
 def aircraft_guided():
     global mavlink_connection
     mavlink_connection.set_mode('GUIDED')
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # Request gps data
 @aircraft.route('/telemetry/gps', methods=['GET'])
+@connection_required
 def aircraft_gps():
     global mavlink_connection
     location = mavlink_connection.location()
-    return jsonify(json.dumps(location.__dict__)), 201
+    return jsonify(location.__dict__), 201
 
 # Request heartbeat data
 @aircraft.route('/telemetry/heartbeat', methods=['GET'])
+@connection_required
 def aircraft_heartbeat():
     global mavlink_connection
     hb = mavlink_connection.wait_heartbeat()
@@ -104,10 +128,11 @@ def aircraft_heartbeat():
             hb_data[attr] = getattr(hb, attr)
 
     # jsonify hb_data
-    return jsonify(json.dumps(hb_data)), 201
+    return jsonify(hb_data), 201
 
 # Guided control / Fly-to
 @aircraft.route('/flyto', methods=['POST'])
+@connection_required
 def aircraft_flyto():
     global mavlink_connection
     frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
@@ -123,10 +148,11 @@ def aircraft_flyto():
         parseRequest(request, 'lng', 0),
         parseRequest(request, 'alt', 0)
     )
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 # Guided control / Take-off
 @aircraft.route('/takeoff', methods=['POST'])
+@connection_required
 def aircraft_takeoff():
     global mavlink_connection
     mavlink_connection.mav.command_long_send(
@@ -141,9 +167,10 @@ def aircraft_takeoff():
         parseRequest(request, 'lng', 0),
         request.json['alt']
     )
-    return jsonify(aircraft_heartbeat()), 201
+    return aircraft_heartbeat()
 
 @aircraft.route('/home_position', methods=['GET'])
+@connection_required
 def aircraft_home_position():
     global mavlink_connection
     mavlink_connection.mav.command_long_send(
@@ -163,19 +190,20 @@ def aircraft_home_position():
     msg_data = {}
 
     if not msg:
-        return json.dumps({'error': 'Invalid message name'})
+        return jsonify({'error': 'Invalid message name'}), 401
     if msg.get_type() == "BAD_DATA":
-        return json.dumps({'error': 'Bad data retrieved'})
+        return jsonify({'error': 'Bad data retrieved'}), 402
     else:
         attributes = msg._fieldnames
         for attr in attributes:
             msg_data[attr] = getattr(msg, attr)
 
     # jsonify msg_data
-    return jsonify(json.dumps(msg_data)), 201
+    return jsonify(msg_data), 201
 
 # upload mission waypoints
 @aircraft.route('/mission', methods=['POST'])
+@connection_required
 def upload_mission_wps():
     global waypoint_loader
     global mavlink_connection
@@ -202,7 +230,7 @@ def upload_mission_wps():
         elif missionRequest['takeoffAlt'] <= 0:
             return jsonify({ "error": "Takeoff altitude must be >0" }), 404
     else:
-        return jsonify({ "error": "Mission format is invalid" }), 400
+        return jsonify({ "error": "Mission format is invalid" }), 405
 
     # stub home wp
     waypoint_loader.add(
@@ -271,6 +299,7 @@ def upload_mission_wps():
 
 # download mission waypoints
 @aircraft.route('/mission', methods=['GET'])
+@connection_required
 def download_mission_wps():
     global waypoint_loader
     mavlink_connection.waypoint_request_list_send()
