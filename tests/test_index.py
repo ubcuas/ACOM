@@ -1,11 +1,6 @@
 import pytest
-from flaskr import create_app
+import json
 
-@pytest.fixture()
-def setUp():
-    app = create_app().test_client()
-    return app
-
-def testRootDirectory(setUp):
-    response = setUp.get('/')
+def testRootDirectory(app):
+    response = app.get('/')
     assert response.status_code == 200

@@ -12,3 +12,7 @@ MAVLINK_SETUP_DEBUG = "production"
 
 # set to 1 to enable debug mode for flask
 FLASK_DEBUG = 1
+
+# set optional default ip address & port
+IP_ADDRESS = "164.2.0.3"
+PORT = 5760

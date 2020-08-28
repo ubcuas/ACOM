@@ -1,65 +1,42 @@
 import pytest
 import json
-from flaskr import create_app
 
 connect_endpoint = '/aircraft/connect'
 mission_endpoint = '/aircraft/mission'
 
-@pytest.fixture()
-def setUp():
-    app = create_app().test_client()
-    return app
-
-# Single test case to ensure checkConnection is ran first
-def testUploadDownload(setUp):
-    checkPrematureAction(setUp)
-    checkConnection(setUp)
-    checkUploadNull(setUp)
-    checkUploadEmpty(setUp)
-    checkInvalidTakeOffAlt(setUp)
-    checkUploadDownloadNonEmpty(setUp)
-
-def checkPrematureAction(setUp):
+def testPrematureAction(app_unconnected):
     global mission_endpoint
-    nullMission = None;
+    nullMission = None
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
+    response = app_unconnected.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
 
     # confirm failure - connection not established
     assert response.status_code == 400
 
-def checkConnection(setUp):
-    global connect_endpoint
-    connect_info = {"ipAddress": "164.2.0.3", "port": 5760}
-
-    response = setUp.post(connect_endpoint, data=json.dumps(connect_info), content_type='application/json')
-
-    assert response.status_code == 201
-
-def checkUploadNull(setUp):
+def testUploadNull(app):
     global mission_endpoint
-    nullMission = None;
+    nullMission = None
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
     responseData = json.loads(response.data)
 
     # confirm failure - invalid format
     assert response.status_code == 405
 
-def checkUploadEmpty(setUp):
+def testUploadEmpty(app):
     global mission_endpoint
-    emptyMission = {"wps": []};
+    emptyMission = {"wps": []}
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(emptyMission), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(emptyMission), content_type='application/json')
     responseData = json.loads(response.data)
 
     # confirm failure - no wps given
     assert response.status_code == 402
 
-def checkInvalidTakeOffAlt(setUp):
+def testInvalidTakeOffAlt(app):
     global mission_endpoint
     
     missionReqNegAlt = {
@@ -88,7 +65,7 @@ def checkInvalidTakeOffAlt(setUp):
             }
         ],
         "rtl": True
-    };
+    }
 
     missionReqNoAlt = {
         "wps": [
@@ -115,23 +92,23 @@ def checkInvalidTakeOffAlt(setUp):
             }
         ],
         "rtl": True
-    };
+    }
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(missionReqNegAlt), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(missionReqNegAlt), content_type='application/json')
     responseData = json.loads(response.data)
 
     # confirm error
     assert response.status_code == 404
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(missionReqNoAlt), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(missionReqNoAlt), content_type='application/json')
     responseData = json.loads(response.data)
 
     # confirm error
     assert response.status_code == 403
 
-def checkUploadDownloadNonEmpty(setUp):
+def testUploadDownloadNonEmpty(app):
     global mission_endpoint
 
     missionReq = {
@@ -160,10 +137,10 @@ def checkUploadDownloadNonEmpty(setUp):
             }
         ],
         "rtl": True
-    };
+    }
 
     # upload wp set
-    response = setUp.post(mission_endpoint, data=json.dumps(missionReq), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(missionReq), content_type='application/json')
     responseData = json.loads(response.data)
 
     # confirm success and count is correct
@@ -171,11 +148,11 @@ def checkUploadDownloadNonEmpty(setUp):
     assert responseData['wps_uploaded'] == 4
 
     # download wp set
-    response = setUp.get(mission_endpoint, content_type='application/json')
+    response = app.get(mission_endpoint, content_type='application/json')
     responseData = json.loads(response.data)
     
     # check the count for the downloaded wp's
     # we won't directly check the values since mavlink does rounding/modifications to the
         # first and last WPs
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert len(responseData['wps']) == 4

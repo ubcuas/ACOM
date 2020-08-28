@@ -2,10 +2,10 @@ version: "3"
 services:
   flask:
     build:
-      context: ./flaskr
+      context: ./src
       dockerfile: Dockerfile
     environment:
-      FLASK_APP: flaskr
+      FLASK_APP: src
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_ENV: development
     command: [ "flask", "run" ]
