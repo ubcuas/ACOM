@@ -44,6 +44,7 @@ class Telemetry():
         }
     
     def is_armed(self):
+        self.wait('HEARTBEAT')
         return self.mavlink_connection.motors_armed()
 
     def start_polling(self):

@@ -40,7 +40,7 @@ def app():
 
     setup_connection(test_client)
 
-    test_client.vehicle.telemetry.wait("HEARTBEAT", timeout=10)
+    test_client.vehicle.telemetry.wait("HEARTBEAT", timeout=10) # wait for a heartbeat before running tests
 
     yield test_client # stop to run tests
 
