@@ -50,4 +50,4 @@ docker-multiarch-publish: docker-multiarch-deps
 
 ## CI ##
 ci-test: docker run-sitl
-	docker run --rm -it --network acom-net ubcuas/acom:latest pytest
+	docker run --rm --network acom-net ubcuas/acom:latest pytest
