@@ -29,6 +29,8 @@ class Telemetry():
 
         self.heartbeat = None
 
+        self.is_polling = False
+
         self.start_polling() # uncomment this to log & poll for all data coming from autopilot
     
     def get_location(self):
@@ -45,12 +47,14 @@ class Telemetry():
         return self.mavlink_connection.motors_armed()
 
     def start_polling(self):
+        print("polling")
         self.heartbeat_lastsent = time.monotonic()
         self.event = Observable()
         self.notifiers = Observable()
         self.init_observers()
         self.thread = Thread(target=self.poll_for_data, daemon=True)
         self.thread.start()
+        self.is_polling = True
 
     def init_data_streams(self):
         """
@@ -72,30 +76,35 @@ class Telemetry():
             msg_type (string): mavlink message
             timeout (number, optional): timeout in seconds. Defaults to None.
         """
-        result = None
+        if self.is_polling:
+            result = None
 
-        def callback(msg):
-            nonlocal result
-            # ignore groundstations for heartbeat
-            # print(msg_type)
-            if msg.get_type() == 'HEARTBEAT' and msg.type == mavutil.mavlink.MAV_TYPE_GCS:
-                self.notifiers.once(msg_type, callback)
-                return
-            result = msg.to_dict()
-        
-        self.notifiers.once(msg_type, callback)
+            def callback(msg):
+                nonlocal result
+                # ignore groundstations for heartbeat
+                # print(msg_type)
+                if msg.get_type() == 'HEARTBEAT' and msg.type == mavutil.mavlink.MAV_TYPE_GCS:
+                    self.notifiers.once(msg_type, callback)
+                    return
+                result = msg
+            
+            self.notifiers.once(msg_type, callback)
 
-        start_time = time.time()
-        while True:
-            if timeout is not None:
-                now = time.time()
-                if now < start_time:
-                    start_time = now # If an external process rolls back system time, we should not spin forever.
-                if start_time + timeout < time.time():
-                    return None
-            if result is not None:
-                return result
-            time.sleep(0.05)
+            start_time = time.time()
+            while True:
+                if timeout is not None:
+                    now = time.time()
+                    if now < start_time:
+                        start_time = now # If an external process rolls back system time, we should not spin forever.
+                    if start_time + timeout < time.time():
+                        return None
+                if result is not None:
+                    return result
+                time.sleep(0.05)
+
+        else:
+            # not polling
+            return self.mavlink_connection.recv_match(type=[msg_type], timeout=timeout, blocking=True)
 
     def init_observers(self):
         """

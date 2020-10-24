@@ -197,6 +197,7 @@ def upload_mission_wps():
         num_wps_loaded = current_app.vehicle.waypoints.upload_mission_wps(missionRequest['wps'], missionRequest['takeoffAlt'], missionRequest['rtl'])
         return jsonify({ "result": "Waypoints uploaded successfully!", "wps_uploaded": num_wps_loaded }), 201
     except Exception as e:
+        print(e)
         return jsonify({ "error": "Waypoints failed to upload." }), 401
 
 # download mission waypoints

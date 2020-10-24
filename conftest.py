@@ -9,6 +9,15 @@ def get_app():
         "MAVLINK_SETUP_DEBUG": "production",
     })
 
+def get_connected_app():
+    return create_app({
+        "APIKEY": 'jif3fioj32ifj3oi2jf2',
+        "FLASK_ENV": "production",
+        "MAVLINK_SETUP_DEBUG": "production",
+        "IP_ADDRESS": "164.2.0.3",
+        "PORT": 5760
+    })
+
 @pytest.fixture()
 def app_unconnected():
     # set up
@@ -24,12 +33,14 @@ def app_unconnected():
 @pytest.fixture()
 def app():
     # set up
-    app_connected = get_app()
+    app_connected = get_connected_app()
 
     test_client = app_connected.test_client()
     test_client.vehicle = app_connected.vehicle
 
     setup_connection(test_client)
+
+    test_client.vehicle.telemetry.wait("HEARTBEAT", timeout=10)
 
     yield test_client # stop to run tests
 

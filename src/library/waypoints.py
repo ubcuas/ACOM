@@ -10,6 +10,7 @@ class Waypoints():
         Args:
             vehicle (vehicle): vehicle instance
         """
+        self.vehicle = vehicle
         self.mavlink_connection = vehicle.mavlink_connection
         self.waypoint_loader = mavwp.MAVWPLoader(target_system=self.mavlink_connection.target_system, target_component=self.mavlink_connection.target_component)
     
@@ -31,7 +32,7 @@ class Waypoints():
         while True:
             if count is None:
                 try:
-                    count = self.mavlink_connection.recv_match(type='MISSION_COUNT', blocking=True, timeout=5).count
+                    count = self.vehicle.telemetry.wait('MISSION_COUNT', timeout=5).count
                 except:
                     count = None
                     continue
@@ -42,7 +43,7 @@ class Waypoints():
                     break
                 self.mavlink_connection.waypoint_request_send(0)
 
-            next_wp = self.mavlink_connection.recv_match(type='MISSION_ITEM', blocking=True, timeout=15)
+            next_wp = self.vehicle.telemetry.wait('MISSION_ITEM', timeout=5)
             if next_wp is not None:
                 # home position wp
                 if next_wp.command == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT and next_wp.seq == 0:
@@ -133,13 +134,14 @@ class Waypoints():
 
         # send wps 1 by 1
         for i in range(self.waypoint_loader.count()):               
-            msg = self.mavlink_connection.recv_match(type=['MISSION_REQUEST'],blocking=True)             
+            msg = self.vehicle.telemetry.wait('MISSION_REQUEST', timeout=5)
+            print(msg)       
             self.mavlink_connection.mav.send(self.waypoint_loader.wp(msg.seq))                                                                      
             # print('Sending waypoint %d', msg.seq)
 
         # get wp count received
         self.mavlink_connection.waypoint_request_list_send()
-        count = int(self.mavlink_connection.recv_match(type=['MISSION_COUNT'],blocking=True).count)
+        count = int(self.vehicle.telemetry.wait('MISSION_COUNT', timeout=5).count)
 
         if(count == self.waypoint_loader.count()):
             return num_wps_loaded
