@@ -15,7 +15,7 @@ class Telemetry():
         Args:
             vehicle (vehicle): vehicle instance
         """
-        self.verbose = False
+        self.verbose = False # prints all incoming messages
 
         self.vehicle = vehicle
         self.mavlink_connection = vehicle.mavlink_connection
@@ -28,6 +28,10 @@ class Telemetry():
         self.heading = None
 
         self.heartbeat = None
+
+        self.mav_type = None
+        self.base_mode = None
+        self.armed = False
 
         self.is_polling = False
 
@@ -44,8 +48,21 @@ class Telemetry():
         }
     
     def is_armed(self):
-        self.wait('HEARTBEAT')
-        return self.mavlink_connection.motors_armed()
+        return self.armed
+
+    def wait_armed(self, expected, timeout=None):
+        start_time = time.time()
+        while True:
+            if timeout is not None:
+                now = time.time()
+                if now < start_time:
+                    start_time = now # If an external process rolls back system time, we should not spin forever.
+                if start_time + timeout < time.time():
+                    return
+            if self.armed == expected:
+                return
+
+            time.sleep(0.05)
 
     def start_polling(self):
         print("polling")
@@ -121,7 +138,13 @@ class Telemetry():
             # ignore groundstations
             if msg.type == mavutil.mavlink.MAV_TYPE_GCS:
                 return
-            self.heartbeat = msg.to_dict()
+            
+            self.heartbeat = msg
+
+            self.mav_type = msg.type
+            self.base_mode = msg.base_mode
+            self.armed = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
+
         
         @self.event.on('GLOBAL_POSITION_INT')
         def gpi_listener(msg):

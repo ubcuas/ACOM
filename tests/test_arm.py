@@ -1,5 +1,6 @@
 import pytest
 import json
+import time
 
 arm_endpoint = '/aircraft/arm'
 

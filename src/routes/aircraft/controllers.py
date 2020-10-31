@@ -56,14 +56,22 @@ def aircraft_reroute():
 @connection_required
 def aircraft_arm():
     current_app.vehicle.arm()
-    return aircraft_heartbeat()
+    # current_app.vehicle.wait_armed(True, 5)
+    return aircraft_heartbeat()[0], 201
 
 # Disarms the aircraft
 @aircraft.route('/disarm', methods=['PUT'])
 @connection_required
 def aircraft_disarm():
     current_app.vehicle.disarm()
-    return aircraft_heartbeat()
+    # current_app.vehicle.wait_armed(False, 5)
+    return aircraft_heartbeat()[0], 201
+
+# Returns status of the aircraft
+@aircraft.route('/arm', methods=['get'])
+@connection_required
+def aircraft_isarmed():
+    return jsonify(current_app.vehicle.telemetry.is_armed()), 200
 
 # RTL
 @aircraft.route('/rtl', methods=['PUT'])
@@ -124,8 +132,7 @@ def aircraft_gps():
 @connection_required
 def aircraft_heartbeat():
     current_app.vehicle.telemetry.wait("HEARTBEAT")
-    return jsonify(current_app.vehicle.telemetry.heartbeat), 200
-    # return jsonify(hb_data), 200
+    return jsonify(current_app.vehicle.telemetry.heartbeat.to_dict()), 200
 
 # Guided control / Fly-to
 @aircraft.route('/flyto', methods=['POST'])
@@ -135,7 +142,7 @@ def aircraft_flyto(lat=0, lng=0, alt=0):
     lng = parseRequest(request, 'lng', lng)
     alt = parseRequest(request, 'alt', alt)
     current_app.vehicle.fly_to(lat, lng, alt)
-    return aircraft_heartbeat()
+    return aircraft_heartbeat(), 200
 
 # Guided control / Take-off
 @aircraft.route('/takeoff', methods=['POST'])
