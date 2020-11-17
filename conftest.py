@@ -7,8 +7,6 @@ def get_app():
         "APIKEY": 'jif3fioj32ifj3oi2jf2',
         "FLASK_ENV": "production",
         "MAVLINK_SETUP_DEBUG": "production",
-        # "IP_ADDRESS": None,
-        # "PORT": None
     })
 
 @pytest.fixture()
@@ -40,10 +38,10 @@ def app():
 
 def setup_connection(app):
     response = app.post('/aircraft/connect', data=json.dumps({
-        "ipAddress": "164.2.0.3",
+        "ipAddress": "acom-sitl",
         "port": 5760
     }), content_type='application/json')
 
-    print(response.data)
+    print("\n", response.data, "\n")
 
     assert response.status_code == 201

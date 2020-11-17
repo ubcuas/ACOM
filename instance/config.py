@@ -14,5 +14,5 @@ MAVLINK_SETUP_DEBUG = "production"
 FLASK_DEBUG = 1
 
 # set optional default ip address & port
-IP_ADDRESS = "164.2.0.3"
+IP_ADDRESS = "acom-sitl"
 PORT = 5760
