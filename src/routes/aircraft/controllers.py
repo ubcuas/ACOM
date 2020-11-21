@@ -11,12 +11,12 @@ aircraft = Blueprint('aircraft', __name__)
 # decorator that checks if a mavlink connection has been established
 def connection_required(f):
     @wraps(f)
-    def wrap(*args, **kwargs):        
+    def wrap(*args, **kwargs):
         if current_app.vehicle.is_connected():
             return f(*args, **kwargs)
         else:
             return jsonify({"error": "Aircraft connection has not been established"}), 400
-   
+
     return wrap
 
 # sets and establishes a mavlink connection
@@ -26,7 +26,7 @@ def aircraft_connect():
 
     if 'ipAddress' not in connectionRequest:
         return jsonify({"error": "IP address was not specified"}), 401
-    
+
     if 'port' not in connectionRequest:
         return jsonify({"error": "Port was not specified"}), 402
 
@@ -161,7 +161,7 @@ def aircraft_home_position():
     current_app.vehicle.mavlink_connection.mav.command_long_send(
         current_app.vehicle.mavlink_connection.target_system,
         current_app.vehicle.mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_GET_HOME_POSITION, 
+        mavutil.mavlink.MAV_CMD_GET_HOME_POSITION,
         0,
         0,
         0,
