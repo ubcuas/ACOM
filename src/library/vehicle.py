@@ -6,7 +6,7 @@ import math
 import threading
 
 from src.library.util import get_distance_metres, get_point_further_away, get_degrees_needed_to_turn, empty_socket
-from src.library.telemetry import Telemetry
+import src.library.telemetry
 from src.library.location import Location
 from src.library.waypoints import Waypoints
 
@@ -29,7 +29,7 @@ class Vehicle:
             self.mavlink_connection.wait_heartbeat(timeout=5)
             current_app.logger.info("Heartbeat from system (system %u component %u)" % (self.mavlink_connection.target_system, self.mavlink_connection.target_component))
             # init telemetry
-            self.telemetry = Telemetry(self)
+            self.telemetry = src.library.telemetry.Telemetry(self)
 
             # init waypoints
             self.waypoints = Waypoints(self)
@@ -138,3 +138,5 @@ class Vehicle:
                     print("Reached waypoint")
                     break
         self.set_auto()
+
+vehicle = Vehicle()

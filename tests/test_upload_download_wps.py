@@ -1,15 +1,19 @@
 import pytest
 import json
+from unittest.mock import patch
 
 connect_endpoint = '/aircraft/connect'
 mission_endpoint = '/aircraft/mission'
 
-def testPrematureAction(app_unconnected):
+@patch('src.routes.aircraft.controllers.vehicle')
+def testPrematureAction(vehicle, app):
+    vehicle.is_connected.return_value = False
+    
     global mission_endpoint
     nullMission = None
 
     # upload wp set
-    response = app_unconnected.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
+    response = app.post(mission_endpoint, data=json.dumps(nullMission), content_type='application/json')
 
     # confirm failure - connection not established
     assert response.status_code == 400

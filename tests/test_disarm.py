@@ -3,22 +3,20 @@ import json
 import time
 from unittest.mock import patch, MagicMock
 
-arm_endpoint = '/aircraft/arm'
-
+disarm_endpoint = '/aircraft/disarm'
 
 @patch('src.routes.aircraft.controllers.vehicle')
 def test_premature_action(vehicle, app):
     vehicle.is_connected.return_value = False
-
+    
     # upload wp set
-    response = app.put(arm_endpoint)
+    response = app.put(disarm_endpoint)
 
     # confirm failure - connection not established
     assert response.status_code == 400
 
-
 @patch('src.routes.aircraft.controllers.vehicle')
-def test_arm_endpoint_calls_vehicle_arm(vehicle, app):
+def test_disarm_endpoint_calls_vehicle_disarm(vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,
@@ -30,11 +28,9 @@ def test_arm_endpoint_calls_vehicle_arm(vehicle, app):
     }
 
     vehicle.telemetry.heartbeat.to_dict.return_value = test_heartbeat
-    response = app.put(arm_endpoint)
+    response = app.put(disarm_endpoint)
 
     assert response.status_code == 201
     assert json.loads(response.data) == test_heartbeat
 
-    vehicle.arm.assert_called_once()
-
-    # assert json.loads(app.get(arm_endpoint).data) == True
+    vehicle.disarm.assert_called_once()

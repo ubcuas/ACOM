@@ -6,6 +6,7 @@ import socket
 
 from src.library.util import empty_socket
 
+
 class Telemetry():
     def __init__(self, vehicle):
         """
@@ -15,7 +16,7 @@ class Telemetry():
         Args:
             vehicle (vehicle): vehicle instance
         """
-        self.verbose = False # prints all incoming messages
+        self.verbose = False  # prints all incoming messages
 
         self.vehicle = vehicle
         self.mavlink_connection = vehicle.mavlink_connection
@@ -35,8 +36,8 @@ class Telemetry():
 
         self.is_polling = False
 
-        self.start_polling() # uncomment this to log & poll for all data coming from autopilot
-    
+        self.start_polling()  # uncomment this to log & poll for all data coming from autopilot
+
     def get_location(self):
         # empty_socket(self.mavlink_connection)
         # return self.mavlink_connection.location().__dict__
@@ -46,7 +47,7 @@ class Telemetry():
             "alt": self.alt,
             "heading": self.heading
         }
-    
+
     def is_armed(self):
         return self.armed
 
@@ -56,7 +57,8 @@ class Telemetry():
             if timeout is not None:
                 now = time.time()
                 if now < start_time:
-                    start_time = now # If an external process rolls back system time, we should not spin forever.
+                    # If an external process rolls back system time, we should not spin forever.
+                    start_time = now
                 if start_time + timeout < time.time():
                     return
             if self.armed == expected:
@@ -80,11 +82,11 @@ class Telemetry():
         """
         # self.mavlink_connection.mav.request_data_stream_send(self.mavlink_connection.target_system, self.mavlink_connection.target_component,
         #                                      mavutil.mavlink.MAV_DATA_STREAM_ALL, 0, 0)
-        self.set_message_interval(24, 10) # gps
-        self.set_message_interval(0,  10) # heartbeat
-        self.set_message_interval(74, 10) # vfr_hud
-        self.set_message_interval(33, 10) # gps
-    
+        self.set_message_interval(24, 10)  # gps
+        self.set_message_interval(0,  10)  # heartbeat
+        self.set_message_interval(74, 10)  # vfr_hud
+        self.set_message_interval(33, 10)  # gps
+
     def wait(self, msg_type, timeout=None):
         """
         blocks until a specific msg_type is received, and returns it. if timeout
@@ -105,7 +107,7 @@ class Telemetry():
                     self.notifiers.once(msg_type, callback)
                     return
                 result = msg
-            
+
             self.notifiers.once(msg_type, callback)
 
             start_time = time.time()
@@ -113,7 +115,8 @@ class Telemetry():
                 if timeout is not None:
                     now = time.time()
                     if now < start_time:
-                        start_time = now # If an external process rolls back system time, we should not spin forever.
+                        # If an external process rolls back system time, we should not spin forever.
+                        start_time = now
                     if start_time + timeout < time.time():
                         return None
                 if result is not None:
@@ -138,18 +141,18 @@ class Telemetry():
             # ignore groundstations
             if msg.type == mavutil.mavlink.MAV_TYPE_GCS:
                 return
-            
+
             self.heartbeat = msg
 
             self.mav_type = msg.type
             self.base_mode = msg.base_mode
-            self.armed = (msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
+            self.armed = (msg.base_mode &
+                          mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
 
-        
         @self.event.on('GLOBAL_POSITION_INT')
         def gpi_listener(msg):
             return
-        
+
         @self.event.on('VFR_HUD')
         def vfr_listener(msg):
             self.alt = msg.alt
@@ -168,7 +171,7 @@ class Telemetry():
         Args:
             messageid (number): mavlink message id
             interval (number): frequency of message in hz
-        """    
+        """
         milliseconds = 0
         if interval == -1:
             milliseconds = -1
@@ -179,8 +182,8 @@ class Telemetry():
             self.mavlink_connection.target_system,
             self.mavlink_connection.target_component,
             mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, 0,
-            messageid, # message id
-            int(milliseconds), # interval in us
+            messageid,  # message id
+            int(milliseconds),  # interval in us
             0,
             0,
             0,
@@ -195,13 +198,13 @@ class Telemetry():
 
         Raises:
             Exception: various exceptions
-        """      
+        """
         try:
             while True:
                 # send heartbeat to autopilot
                 if time.monotonic() - self.heartbeat_lastsent > 1:
                     self.mavlink_connection.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS,
-                                                    mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
+                                                               mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
                     self.heartbeat_lastsent = time.monotonic()
 
                 # Sleep
