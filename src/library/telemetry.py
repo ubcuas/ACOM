@@ -36,11 +36,9 @@ class Telemetry():
 
         self.is_polling = False
 
-        self.start_polling()  # uncomment this to log & poll for all data coming from autopilot
+        self.start_polling()  # this is to log & poll for all data coming from autopilot
 
     def get_location(self):
-        # empty_socket(self.mavlink_connection)
-        # return self.mavlink_connection.location().__dict__
         return {
             "lat": self.lat,
             "lng": self.lng,
@@ -80,8 +78,6 @@ class Telemetry():
         """
         Initializes message requests at a specific frequency
         """
-        # self.mavlink_connection.mav.request_data_stream_send(self.mavlink_connection.target_system, self.mavlink_connection.target_component,
-        #                                      mavutil.mavlink.MAV_DATA_STREAM_ALL, 0, 0)
         self.set_message_interval(24, 10)  # gps
         self.set_message_interval(0,  10)  # heartbeat
         self.set_message_interval(74, 10)  # vfr_hud
@@ -102,7 +98,6 @@ class Telemetry():
             def callback(msg):
                 nonlocal result
                 # ignore groundstations for heartbeat
-                # print(msg_type)
                 if msg.get_type() == 'HEARTBEAT' and msg.type == mavutil.mavlink.MAV_TYPE_GCS:
                     self.notifiers.once(msg_type, callback)
                     return

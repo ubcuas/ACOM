@@ -52,5 +52,5 @@ docker-multiarch-publish: docker-multiarch-deps
 	docker buildx build . --pull=true -t ubcuas/acom:latest --push --platform "linux/amd64"
 
 ## CI ##
-ci-test: docker run-sitl-wait
+ci-test: docker run-sitl
 	docker run --rm --network acom-net ubcuas/acom:latest pytest -s
