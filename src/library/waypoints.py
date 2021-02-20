@@ -4,7 +4,6 @@ from src.library.util import parseJson
 
 class Waypoints:
     def __init__(self, vehicle):
-
         """
         Initializes waypoint loading/downloading
 
@@ -19,11 +18,7 @@ class Waypoints:
         )
 
     def download_mission_wps(self):
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
+        """Downloads the current mission waypoints"""
         self.mavlink_connection.waypoint_request_list_send()
 
         count = None
@@ -82,7 +77,7 @@ class Waypoints:
         return {"homePos": homePos, "rtl": rtl, "takeoffAlt": takeoffAlt, "wps": wps}
 
     def upload_mission_wps(self, waypoints, takeoffAlt, rtl):
-        """[summary]"""
+        """Uploads the mission waypoints to the flight controller"""
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
         seqNum = 0
         self.waypoint_loader.clear()
@@ -172,21 +167,6 @@ class Waypoints:
             raise Exception("Waypoints failed to upload.")
 
     def generate_mission_item(self, seqNum, frame, wpType, hold, radius, lat, lng, alt):
-        """[summary]
-
-        Args:
-            seqNum ([type]): [description]
-            frame ([type]): [description]
-            wpType ([type]): [description]
-            hold ([type]): [description]
-            radius ([type]): [description]
-            lat ([type]): [description]
-            lng ([type]): [description]
-            alt ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
         return mavutil.mavlink.MAVLink_mission_item_message(
             self.mavlink_connection.target_system,
             self.mavlink_connection.target_component,
