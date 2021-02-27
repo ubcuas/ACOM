@@ -7,7 +7,7 @@ import socket
 from src.library.util import empty_socket
 
 
-class Telemetry():
+class Telemetry:
     def __init__(self, vehicle):
         """
         Initializes telemetry data streams, observers, and listens to every incoming
@@ -43,7 +43,7 @@ class Telemetry():
             "lat": self.lat,
             "lng": self.lng,
             "alt": self.alt,
-            "heading": self.heading
+            "heading": self.heading,
         }
 
     def is_armed(self):
@@ -65,7 +65,7 @@ class Telemetry():
             time.sleep(0.05)
 
     def start_polling(self):
-        print("polling")
+        print("Starting polling...")
         self.heartbeat_lastsent = time.monotonic()
         self.event = Observable()
         self.notifiers = Observable()
@@ -79,7 +79,7 @@ class Telemetry():
         Initializes message requests at a specific frequency
         """
         self.set_message_interval(24, 10)  # gps
-        self.set_message_interval(0,  10)  # heartbeat
+        self.set_message_interval(0, 10)  # heartbeat
         self.set_message_interval(74, 10)  # vfr_hud
         self.set_message_interval(33, 10)  # gps
 
@@ -98,7 +98,10 @@ class Telemetry():
             def callback(msg):
                 nonlocal result
                 # ignore groundstations for heartbeat
-                if msg.get_type() == 'HEARTBEAT' and msg.type == mavutil.mavlink.MAV_TYPE_GCS:
+                if (
+                    msg.get_type() == "HEARTBEAT"
+                    and msg.type == mavutil.mavlink.MAV_TYPE_GCS
+                ):
                     self.notifiers.once(msg_type, callback)
                     return
                 result = msg
@@ -120,7 +123,9 @@ class Telemetry():
 
         else:
             # not polling
-            return self.mavlink_connection.recv_match(type=[msg_type], timeout=timeout, blocking=True)
+            return self.mavlink_connection.recv_match(
+                type=[msg_type], timeout=timeout, blocking=True
+            )
 
     def init_observers(self):
         """
@@ -131,7 +136,8 @@ class Telemetry():
         def listener(msg):
             print(msg)
         """
-        @self.event.on('HEARTBEAT')
+
+        @self.event.on("HEARTBEAT")
         def hb_listener(msg):
             # ignore groundstations
             if msg.type == mavutil.mavlink.MAV_TYPE_GCS:
@@ -141,22 +147,23 @@ class Telemetry():
 
             self.mav_type = msg.type
             self.base_mode = msg.base_mode
-            self.armed = (msg.base_mode &
-                          mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED) != 0
+            self.armed = (
+                msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
+            ) != 0
 
-        @self.event.on('GLOBAL_POSITION_INT')
+        @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
             return
 
-        @self.event.on('VFR_HUD')
+        @self.event.on("VFR_HUD")
         def vfr_listener(msg):
             self.alt = msg.alt
             self.heading = msg.heading
 
-        @self.event.on('GPS_RAW_INT')
+        @self.event.on("GPS_RAW_INT")
         def gps_kistener(msg):
-            self.lat = msg.lat*1.0e-7
-            self.lng = msg.lon*1.0e-7
+            self.lat = msg.lat * 1.0e-7
+            self.lng = msg.lon * 1.0e-7
 
     # set a message interval for a specific mavlink message
     def set_message_interval(self, messageid, interval):
@@ -171,19 +178,20 @@ class Telemetry():
         if interval == -1:
             milliseconds = -1
         elif interval > 0:
-            milliseconds = (1000000 / interval)
+            milliseconds = 1000000 / interval
 
         self.mavlink_connection.mav.command_long_send(
             self.mavlink_connection.target_system,
             self.mavlink_connection.target_component,
-            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, 0,
+            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+            0,
             messageid,  # message id
             int(milliseconds),  # interval in us
             0,
             0,
             0,
             0,
-            0
+            0,
         )
 
     def poll_for_data(self):
@@ -198,8 +206,13 @@ class Telemetry():
             while True:
                 # send heartbeat to autopilot
                 if time.monotonic() - self.heartbeat_lastsent > 1:
-                    self.mavlink_connection.mav.heartbeat_send(mavutil.mavlink.MAV_TYPE_GCS,
-                                                               mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0)
+                    self.mavlink_connection.mav.heartbeat_send(
+                        mavutil.mavlink.MAV_TYPE_GCS,
+                        mavutil.mavlink.MAV_AUTOPILOT_INVALID,
+                        0,
+                        0,
+                        0,
+                    )
                     self.heartbeat_lastsent = time.monotonic()
 
                 # Sleep
@@ -215,11 +228,11 @@ class Telemetry():
                         # Avoid
                         #   invalid MAVLink prefix '73'
                         #   invalid MAVLink prefix '13'
-                        print('mav recv error: %s' % str(e))
+                        print("mav recv error: %s" % str(e))
                         msg = None
                     except Exception as e:
                         # Log any other unexpected exception
-                        print('Exception while receiving message: ')
+                        print("Exception while receiving message: ")
                         print(e)
                         msg = None
                     if not msg:
@@ -232,6 +245,6 @@ class Telemetry():
                     self.notifiers.trigger(msg.get_type(), msg)
 
         except Exception as e:
-            print('Exception in MAVLink input loop')
+            print("Exception in MAVLink input loop")
             print(e)
             return
