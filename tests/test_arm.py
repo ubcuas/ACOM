@@ -10,7 +10,6 @@ arm_endpoint = "/aircraft/arm"
 def test_premature_action(vehicle, app):
     vehicle.is_connected.return_value = False
 
-    # upload wp set
     response = app.put(arm_endpoint)
 
     # confirm failure - connection not established

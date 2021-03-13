@@ -1,23 +1,22 @@
 import pytest
 import json
-import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-disarm_endpoint = "/aircraft/disarm"
+flyto_endpoint = "/aircraft/flyto"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
 def test_premature_action(vehicle, app):
     vehicle.is_connected.return_value = False
 
-    response = app.put(disarm_endpoint)
+    response = app.post(flyto_endpoint)
 
     # confirm failure - connection not established
     assert response.status_code == 400
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_disarm_endpoint_calls_vehicle_disarm(vehicle, app):
+def test_flyto_calls_vehicle_flyto_with_correct_parameters(vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,
@@ -27,11 +26,21 @@ def test_disarm_endpoint_calls_vehicle_disarm(vehicle, app):
         "system_status": 4,
         "type": 2,
     }
-
     vehicle.telemetry.heartbeat.to_dict.return_value = test_heartbeat
-    response = app.put(disarm_endpoint)
 
-    assert response.status_code == 201
+    flyto_data = {
+        "lat": 1,
+        "lng": 2,
+        "alt": 3,
+    }
+
+    response = app.post(
+        flyto_endpoint,
+        data=json.dumps(flyto_data),
+        content_type="application/json",
+    )
+
+    vehicle.fly_to.assert_called_with(1, 2, 3)
+
+    assert response.status_code == 200
     assert json.loads(response.data) == test_heartbeat
-
-    vehicle.disarm.assert_called_once()

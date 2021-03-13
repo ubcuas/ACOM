@@ -89,7 +89,6 @@ def aircraft_isarmed():
 @aircraft.route("/rtl", methods=["PUT"])
 @connection_required
 def aircraft_rtl():
-
     vehicle.mavlink_connection.set_mode_rtl()
     return aircraft_heartbeat()
 
@@ -98,7 +97,6 @@ def aircraft_rtl():
 @aircraft.route("/manual", methods=["PUT"])
 @connection_required
 def aircraft_manual():
-    global mavlink_connection
     vehicle.mavlink_connection.set_mode_manual()
     return aircraft_heartbeat()
 
@@ -107,7 +105,6 @@ def aircraft_manual():
 @aircraft.route("/auto", methods=["PUT"])
 @connection_required
 def aircraft_auto():
-    global mavlink_connection
     vehicle.mavlink_connection.set_mode_auto()
     return aircraft_heartbeat()
 
@@ -116,18 +113,8 @@ def aircraft_auto():
 @aircraft.route("/guided", methods=["PUT"])
 @connection_required
 def aircraft_guided():
-    global mavlink_connection
     vehicle.mavlink_connection.set_mode("GUIDED")
     return aircraft_heartbeat()
-
-
-# Request latest msg
-@aircraft.route("/telemetry/msg", methods=["GET"])
-@connection_required
-def aircraft_latest():
-    msg = vehicle.mavlink_connection.recv_match(blocking=True)
-    print(msg)
-    return jsonify(msg.to_dict()), 200
 
 
 # Request flight mode
@@ -135,7 +122,7 @@ def aircraft_latest():
 @connection_required
 def aircraft_flightmode():
     flightmode = vehicle.mavlink_connection.flightmode
-    return flightmode, 200
+    return jsonify({"flightmode": flightmode}), 200
 
 
 # Request gps data

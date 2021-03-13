@@ -153,7 +153,6 @@ class Waypoints:
         # send wps 1 by 1
         for i in range(self.waypoint_loader.count()):
             msg = self.vehicle.telemetry.wait("MISSION_REQUEST", timeout=5)
-            print(msg)
             self.mavlink_connection.mav.send(self.waypoint_loader.wp(msg.seq))
             # print('Sending waypoint %d', msg.seq)
 
