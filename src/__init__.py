@@ -1,7 +1,7 @@
 from flask import Flask, request, abort, jsonify
 from src.routes.aircraft.controllers import aircraft
 from functools import wraps
-from src.library.vehicle import Vehicle
+from src.library.vehicle import vehicle
 import os
 
 # Create app
@@ -15,8 +15,6 @@ def create_app(test_config=None):
         MAVLINK_SETUP_DEBUG="production",
         FLASK_DEBUG=1
     )
-
-    app.vehicle = Vehicle()
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -37,7 +35,7 @@ def create_app(test_config=None):
         with app.app_context():
             if "IP_ADDRESS" in app.config and "PORT" in app.config:  
                 app.logger.info("Seting up mavlink connection automatically from config variables")
-                app.vehicle.setup_mavlink_connection(app.config['IP_ADDRESS'], app.config['PORT'])   
+                vehicle.setup_mavlink_connection(app.config['IP_ADDRESS'], app.config['PORT'])   
 
     # enforces apikey on eps
     def require_apikey(view_function):
