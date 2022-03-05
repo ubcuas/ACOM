@@ -10,6 +10,7 @@ import src.library.telemetry
 from src.library.location import Location
 from src.library.waypoints import Waypoints
 
+import requests
 import asyncio
 
 class Vehicle:
@@ -20,6 +21,28 @@ class Vehicle:
         self.waypoint_loader = None
 
         self.connecting = False
+
+
+    def post_to_gcom(self):
+        # used in a thread to continuously post telemetry
+        # data to GCOM-X
+        endpoint = "http://host.docker.internal:8080/api/interop/telemetry"
+
+        while True:
+            json_data = {
+                "latitude_dege7":  vehicle.get_location()["lat"],
+                "longitude_dege7": vehicle.get_location()["lng"],
+                "altitude_msl_m":  vehicle.get_location()["alt"],
+                "heading_deg":     vehicle.get_heading()
+            }
+
+            headers = { 'content-type': 'application/json' }
+
+            request = requests.post(
+                endpoint, headers=headers, data=json.dumps(json_data)
+            )
+            time.sleep(1)
+
 
     def setup_mavlink_connection(self, ip_address, port):   
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
@@ -33,6 +56,14 @@ class Vehicle:
 
             # init waypoints
             self.waypoints = Waypoints(self)
+
+            # connection established, vehicle initialized
+            # begin eternally posting telemetry to GCOM
+            # via an eternal thread
+            thread_post_to_gcom = threading.Thread(name='thread_post_to_gcom', target=self.post_to_gcom)
+            thread_post_to_gcom.daemon = True
+            thread_post_to_gcom.start()
+
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
