@@ -29,22 +29,26 @@ class Vehicle:
         endpoint = "http://host.docker.internal:8080/api/interop/telemetry"
 
         while True:
-            json_data = {
-                "latitude_dege7":  vehicle.get_location()["lat"],
-                "longitude_dege7": vehicle.get_location()["lng"],
-                "altitude_msl_m":  vehicle.get_location()["alt"],
-                "heading_deg":     vehicle.get_heading()
-            }
+            try:
+                location = vehicle.get_location()
+                _ = requests.post(
+                    endpoint,
+                    headers={ 'content-type': 'application/json' },
+                    data=json.dumps({
+                        "latitude_dege7":  location["lat"]*10**7,
+                        "longitude_dege7": location["lng"]*10**7,
+                        "altitude_msl_m":  location["alt"],
+                        "heading_deg":     vehicle.get_heading()
+                    })
+                )
 
-            headers = { 'content-type': 'application/json' }
+            except Exception as e:
+                current_app.logger.info("Telemetry POST to GCOM [Failed]")
 
-            request = requests.post(
-                endpoint, headers=headers, data=json.dumps(json_data)
-            )
             time.sleep(1)
 
 
-    def setup_mavlink_connection(self, ip_address, port):   
+    def setup_mavlink_connection(self, ip_address, port):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
             self.connecting = True
             current_app.logger.info("Mavlink connection is now being initialized")
@@ -67,29 +71,29 @@ class Vehicle:
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
-    
+
     def disconnect(self):
         if self.mavlink_connection is not None:
             self.mavlink_connection.close()
-        
+
     def is_connected(self):
         return self.mavlink_connection is not None
 
     def arm(self):
         self.mavlink_connection.arducopter_arm()
-    
+
     def disarm(self):
         self.mavlink_connection.arducopter_disarm()
-    
+
     def set_guided(self):
         self.mavlink_connection.set_mode('GUIDED')
-    
+
     def set_auto(self):
         self.mavlink_connection.set_mode('AUTO')
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(target = self.start_reroute, args=[points], daemon=True)
-        self.reroute_thread.start() 
+        self.reroute_thread.start()
 
     def stop_reroute(self):
         self.reroute_thread
@@ -103,18 +107,18 @@ class Vehicle:
 
     def get_heading(self):
         self.telemetry.wait('VFR_HUD')
-        return self.telemetry.alt
+        return self.telemetry.heading
 
     def fly_to(self, lat, lng, alt):
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
         self.mavlink_connection.mav.mission_item_send(0, 0, 0, frame,
             mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
             2, # current wp - guided command
-            0, 
             0,
-            0, 
-            0, 
-            0, 
+            0,
+            0,
+            0,
+            0,
             lat,
             lng,
             alt
@@ -127,7 +131,7 @@ class Vehicle:
             if threading.get_ident() != self.reroute_thread.ident:
                 print("Reroute task cancelled")
                 return
-            
+
             lat = point["lat"]
             lng = point["lng"]
             alt = point["alt"]
@@ -138,7 +142,7 @@ class Vehicle:
             target_location = Location(lat, lng, alt)
             sharp_turn = get_degrees_needed_to_turn(self.get_heading(), current_location, target_location) > 80
 
-            
+
             overShootLocation = get_point_further_away(current_location, target_location, 40)
             overshoot_lat = overShootLocation.lat
             overshoot_lng = overShootLocation.lng
