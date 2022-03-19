@@ -22,7 +22,7 @@ run-sitl-wait: run-sitl
 	sleep 30
 
 run-acom: docker run-dependencies
-	docker run --rm -it -p 5000:5000 --network acom-net --name acom-acom ubcuas/acom:latest
+	docker run --rm -it -p 5000:5000 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:latest
 
 run: run-sitl run-acom
 

@@ -10,6 +10,7 @@ import src.library.telemetry
 from src.library.location import Location
 from src.library.waypoints import Waypoints
 
+import requests
 import asyncio
 
 class Vehicle:
@@ -21,7 +22,33 @@ class Vehicle:
 
         self.connecting = False
 
-    def setup_mavlink_connection(self, ip_address, port):   
+
+    def post_to_gcom(self):
+        # used in a thread to continuously post telemetry
+        # data to GCOM-X
+        endpoint = "http://host.docker.internal:8080/api/interop/telemetry"
+
+        while True:
+            try:
+                location = vehicle.get_location()
+                _ = requests.post(
+                    endpoint,
+                    headers={ 'content-type': 'application/json' },
+                    data=json.dumps({
+                        "latitude_dege7":  location["lat"]*10**7,
+                        "longitude_dege7": location["lng"]*10**7,
+                        "altitude_msl_m":  location["alt"],
+                        "heading_deg":     vehicle.get_heading()
+                    })
+                )
+
+            except Exception as e:
+                current_app.logger.info("Telemetry POST to GCOM [Failed]")
+
+            time.sleep(1)
+
+
+    def setup_mavlink_connection(self, ip_address, port):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
             self.connecting = True
             current_app.logger.info("Mavlink connection is now being initialized")
@@ -34,31 +61,39 @@ class Vehicle:
             # init waypoints
             self.waypoints = Waypoints(self)
 
+            # connection established, vehicle initialized
+            # begin eternally posting telemetry to GCOM
+            # via an eternal thread
+            thread_post_to_gcom = threading.Thread(name='thread_post_to_gcom', target=self.post_to_gcom)
+            thread_post_to_gcom.daemon = True
+            thread_post_to_gcom.start()
+
+
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
-    
+
     def disconnect(self):
         if self.mavlink_connection is not None:
             self.mavlink_connection.close()
-        
+
     def is_connected(self):
         return self.mavlink_connection is not None
 
     def arm(self):
         self.mavlink_connection.arducopter_arm()
-    
+
     def disarm(self):
         self.mavlink_connection.arducopter_disarm()
-    
+
     def set_guided(self):
         self.mavlink_connection.set_mode('GUIDED')
-    
+
     def set_auto(self):
         self.mavlink_connection.set_mode('AUTO')
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(target = self.start_reroute, args=[points], daemon=True)
-        self.reroute_thread.start() 
+        self.reroute_thread.start()
 
     def stop_reroute(self):
         self.reroute_thread
@@ -72,18 +107,18 @@ class Vehicle:
 
     def get_heading(self):
         self.telemetry.wait('VFR_HUD')
-        return self.telemetry.alt
+        return self.telemetry.heading
 
     def fly_to(self, lat, lng, alt):
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
         self.mavlink_connection.mav.mission_item_send(0, 0, 0, frame,
             mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
             2, # current wp - guided command
-            0, 
             0,
-            0, 
-            0, 
-            0, 
+            0,
+            0,
+            0,
+            0,
             lat,
             lng,
             alt
@@ -96,7 +131,7 @@ class Vehicle:
             if threading.get_ident() != self.reroute_thread.ident:
                 print("Reroute task cancelled")
                 return
-            
+
             lat = point["lat"]
             lng = point["lng"]
             alt = point["alt"]
@@ -107,7 +142,7 @@ class Vehicle:
             target_location = Location(lat, lng, alt)
             sharp_turn = get_degrees_needed_to_turn(self.get_heading(), current_location, target_location) > 80
 
-            
+
             overShootLocation = get_point_further_away(current_location, target_location, 40)
             overshoot_lat = overShootLocation.lat
             overshoot_lng = overShootLocation.lng

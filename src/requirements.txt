@@ -7,3 +7,4 @@ python-dotenv==0.10.3
 pytest==5.2.2
 observable==1.0.3
 geographiclib==1.50
+requests==2.27.1
