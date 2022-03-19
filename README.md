@@ -25,4 +25,9 @@ See the full documentation on UAS confluence [here](http://confluence.ubcuas.com
 
 **Server URL**
 
-- http://127.0.0.1:5000/
+- http://172.21.0.3:5000/ 
+
+but it ultimately depends on what the Flask development URL binds itself to, look in the terminal after running
+```
+make run
+```

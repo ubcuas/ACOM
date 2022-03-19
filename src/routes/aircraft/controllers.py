@@ -132,6 +132,13 @@ def aircraft_gps():
     location = vehicle.telemetry.get_location()
     return jsonify(location), 200
 
+@aircraft.route("/telemetry/gps_with_timestamp", methods=["GET"])
+@connection_required
+def aircraft_gps_with_timestamp():
+    location = vehicle.telemetry.get_location()
+    # the timestamp is specifically for SkyPasta which requires a timestamp to be given along with the telemetry data
+    location['timestamp'] = int(time.time())  # get the current unix timestamp
+    return jsonify(location), 200
 
 # Request heartbeat data
 @aircraft.route("/telemetry/heartbeat", methods=["GET"])
