@@ -48,11 +48,16 @@ class Vehicle:
             time.sleep(1)
 
 
-    def setup_mavlink_connection(self, ip_address, port):
+    def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
             self.connecting = True
             current_app.logger.info("Mavlink connection is now being initialized")
-            self.mavlink_connection = mavutil.mavlink_connection('tcp:' + ip_address + ':' + str(port))
+            if connection == "tcp":
+                self.mavlink_connection = mavutil.mavlink_connection(connection + ':' + address + ':' + str(port))
+            elif connection == "serial":
+                self.mavlink_connection = mavutil.mavlink_connection(address, baud=baud)
+            else:
+                raise Exception("Invalid connection type")
             self.mavlink_connection.wait_heartbeat(timeout=5)
             current_app.logger.info("Heartbeat from system (system %u component %u)" % (self.mavlink_connection.target_system, self.mavlink_connection.target_component))
             # init telemetry

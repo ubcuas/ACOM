@@ -34,8 +34,11 @@ def create_app(test_config=None):
     if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         with app.app_context():
             if "IP_ADDRESS" in app.config and "PORT" in app.config:  
-                app.logger.info("Seting up mavlink connection automatically from config variables")
-                vehicle.setup_mavlink_connection(app.config['IP_ADDRESS'], app.config['PORT'])   
+                app.logger.info("Seting up TCP mavlink connection automatically from config variables")
+                vehicle.setup_mavlink_connection('tcp', app.config['IP_ADDRESS'], app.config['PORT'])   
+            elif "SERIAL_PORT" in app.config and "BAUD_RATE" in app.config:
+                app.logger.info("Seting up serial mavlink connection automatically from config variables")
+                vehicle.setup_mavlink_connection('serial', app.config['SERIAL_PORT'], baud=app.config['BAUD_RATE'])   
 
     # enforces apikey on eps
     def require_apikey(view_function):

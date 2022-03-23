@@ -241,6 +241,6 @@ def download_mission_wps():
 def setup_mavlink_connection(ip_address, port):
     if "development" not in current_app.config["MAVLINK_SETUP_DEBUG"]:
         try:
-            vehicle.setup_mavlink_connection(ip_address, port)
+            vehicle.setup_mavlink_connection('tcp', ip_address, port)
         except Exception:
             abort(400, "Mavlink is not connected")
