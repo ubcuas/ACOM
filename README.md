@@ -31,3 +31,9 @@ but it ultimately depends on what the Flask development URL binds itself to, loo
 ```
 make run
 ```
+
+## Troubleshooting
+
+`[Errno -2] Name or service not known sleeping`
+> When you run acom without uas-sitl, then you will have this error as it tries to connect to SITL through mavlink, but it can't find the address. To fix it, run SITL using `make run-sitl` or kill all the acom containers and run `make run`.
+
