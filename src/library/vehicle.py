@@ -11,7 +11,10 @@ from src.library.location import Location
 from src.library.waypoints import Waypoints
 
 import requests
-import asyncio
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
 
 class Vehicle:
     def __init__(self):
@@ -19,33 +22,40 @@ class Vehicle:
         self.mavlink_connection = None
         self.telemetry = None
         self.waypoint_loader = None
-
         self.connecting = False
 
-
+    # used in a thread to continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
-        # used in a thread to continuously post telemetry
-        # data to GCOM-X
-        endpoint = "http://host.docker.internal:8080/api/interop/telemetry"
-
         while True:
             try:
                 location = vehicle.get_location()
-                _ = requests.post(
-                    endpoint,
-                    headers={ 'content-type': 'application/json' },
+
+                http = requests.Session()
+                retry = Retry(total=None, backoff_factor=1)
+                adapter = HTTPAdapter(max_retries=retry)
+                http.mount('http://', adapter)
+
+                gcom_telemetry_post = http.post(
+                    GCOM_TELEMETRY_ENDPOINT,
+                    headers={ 'content-type': 'application/json', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0' },
                     data=json.dumps({
                         "latitude_dege7":  location["lat"]*10**7,
                         "longitude_dege7": location["lng"]*10**7,
                         "altitude_msl_m":  location["alt"],
                         "heading_deg":     vehicle.get_heading()
-                    })
+                    }),
+                    timeout=3
                 )
 
-            except Exception as e:
-                current_app.logger.info("Telemetry POST to GCOM [Failed]")
+                if gcom_telemetry_post.status_code == 200:
+                    print("GCOM-X telemetry POST [OK]")
+                else:
+                    print("GCOM-X telemetry POST [FAIL]: " + str(gcom_telemetry_post.status_code))
 
-            time.sleep(1)
+            except Exception as e:
+                print("Exception encountered within GCOM POST thread: " + str(e))
+
+            time.sleep(0.1)
 
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
@@ -69,10 +79,9 @@ class Vehicle:
             # connection established, vehicle initialized
             # begin eternally posting telemetry to GCOM
             # via an eternal thread
-            thread_post_to_gcom = threading.Thread(name='thread_post_to_gcom', target=self.post_to_gcom)
-            thread_post_to_gcom.daemon = True
-            thread_post_to_gcom.start()
-
+            with current_app.app_context():
+                post_to_gcom_thread = threading.Thread(target = self.post_to_gcom, daemon=True)
+                post_to_gcom_thread.start()
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
