@@ -13,10 +13,15 @@ See the full documentation on UAS confluence [here](http://confluence.ubcuas.com
 - First, install `docker`
 - Second, to start the project run the following in the project base directory:
 
+For x86:
 ```shell
     $ make run
 ```
 
+For ARM:
+```shell
+    $ make run-arm
+```
 ## Testing
 - Run tests for the whole ACOM flask server:
 ```shell

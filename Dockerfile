@@ -1,6 +1,6 @@
 # UBC UAS Dockerfile - ACOM
 
-FROM ubcuas/pyuuas:latest
+FROM python:3.8
 
 # Create the working directory
 RUN mkdir -p /uas/acom
