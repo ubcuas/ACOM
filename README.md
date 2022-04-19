@@ -22,6 +22,45 @@ For ARM:
 ```shell
     $ make run-arm
 ```
+## Running with serial devices connected via USB
+If you want to run ACOM with a serial device instead of SITL, you must change the `config.py`, and give Docker permission to access your serial device.
+
+### Changing the configuration
+Comment out the `IP_ADDRESS` and `PORT` constants.
+
+After that, uncomment `SERIAL_PORT` and `BAUD_RATE`.
+
+Then, change their values to match your serial device.
+
+Example `config.py` with a serial device on COM8 with a baudrate of 115200
+```py
+...
+
+# set optional default ip address & port
+# IP_ADDRESS = "acom-sitl"
+# PORT = 5760
+
+# set optional default serial port & baud rate
+SERIAL_PORT = "COM8"
+BAUD_RATE = 115200
+```
+
+### Giving Docker containers access to serial devices
+Docker containers do not have access to serial devices out of the box. Because of this, we need to give our container permission to access any devices we want to use.
+- Find the name of your serial device (ex. COM8 on Windows || /dev/ttyACM0 on Linux )
+- You will need to add the following flag to the Makefile: "--device DEVICENAME"
+
+Example: 'run-acom-arm' without serial devices:
+```bash
+run-acom-arm: docker-arm run-dependencies
+	docker run --rm -it -p 5000:5000 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
+```
+Example Continued: 'run-acom-arm' with access to '/dev/ttyACM0'
+```bash
+run-acom-arm: docker-arm run-dependencies
+	docker run --rm -it -p 5000:5000 --device /dev/ttyACM0 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
+```
+NOTE: There is no simple way to access serial devices via Docker Desktop on Mac. This is an [open issue](https://github.com/docker/for-mac/issues/900) 😭
 ## Testing
 - Run tests for the whole ACOM flask server:
 ```shell
@@ -30,7 +69,7 @@ For ARM:
 
 **Server URL**
 
-- http://172.21.0.3:5000/ 
+- http://172.21.0.3:5000/
 
 but it ultimately depends on what the Flask development URL binds itself to, look in the terminal after running
 ```
