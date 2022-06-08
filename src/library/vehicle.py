@@ -1,4 +1,5 @@
 from flask import current_app, abort
+from datetime import datetime
 import time
 import json
 from pymavlink import mavutil
@@ -59,6 +60,27 @@ class Vehicle:
 
             time.sleep(0.1)
 
+    def rc_disconnect_monitor(self):
+        disconnect_timer = False
+        rc_threshold = 975
+
+        while True:
+            channel = vehicle.get_rc_channel()
+            if channel < rc_threshold and disconnect_timer == False:
+                disconnect_timer = True
+                orig_time = datetime.now()
+                print("RC Connection Lost!")
+            elif channel < rc_threshold and disconnect_timer:
+                curr_time = datetime.now()
+                print("RC Connection [Disconnected]: ", round((curr_time - orig_time).total_seconds(),1))
+                if (curr_time - orig_time).total_seconds() > 30:
+                    vehicle.set_rtl()
+                    print("RC Connection [Expired]: Aircraft returning home to land")
+                    return
+            else:
+                disconnect_timer = False
+                print("RC Connection [OK]")
+            time.sleep(0.1)
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
@@ -84,6 +106,8 @@ class Vehicle:
             with current_app.app_context():
                 post_to_gcom_thread = threading.Thread(target = self.post_to_gcom, daemon=True)
                 post_to_gcom_thread.start()
+                rc_disconnect_monitor_thread = threading.Thread(target = self.rc_disconnect_monitor, daemon=True)
+                rc_disconnect_monitor_thread.start()
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
@@ -106,6 +130,9 @@ class Vehicle:
 
     def set_auto(self):
         self.mavlink_connection.set_mode('AUTO')
+
+    def set_rtl(self):
+        vehicle.mavlink_connection.set_mode('RTL')
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(target = self.start_reroute, args=[points], daemon=True)
