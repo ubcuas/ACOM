@@ -27,6 +27,7 @@ class Telemetry:
         self.lng = None
         self.alt = None
         self.heading = None
+        self.groundspeed = None
 
         self.heartbeat = None
 
@@ -82,6 +83,7 @@ class Telemetry:
         self.set_message_interval(0, 10)  # heartbeat
         self.set_message_interval(74, 10)  # vfr_hud
         self.set_message_interval(33, 10)  # gps
+        self.set_message_interval(35, 10)  # rc channels
 
     def wait(self, msg_type, timeout=None):
         """
@@ -153,17 +155,21 @@ class Telemetry:
 
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
-            return
+            self.alt = msg.alt / 1000
 
         @self.event.on("VFR_HUD")
         def vfr_listener(msg):
-            self.alt = msg.alt
+            self.groundspeed = msg.groundspeed
             self.heading = msg.heading
 
         @self.event.on("GPS_RAW_INT")
-        def gps_kistener(msg):
+        def gps_listener(msg):
             self.lat = msg.lat * 1.0e-7
             self.lng = msg.lon * 1.0e-7
+
+        @self.event.on("RC_CHANNELS_RAW")
+        def rc_listener(msg):
+            self.chan3_raw = msg.chan3_raw
 
     # set a message interval for a specific mavlink message
     def set_message_interval(self, messageid, interval):

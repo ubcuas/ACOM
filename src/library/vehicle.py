@@ -42,7 +42,9 @@ class Vehicle:
                         "latitude_dege7":  location["lat"]*10**7,
                         "longitude_dege7": location["lng"]*10**7,
                         "altitude_msl_m":  location["alt"],
-                        "heading_deg":     vehicle.get_heading()
+                        "heading_deg":     vehicle.get_heading(),
+                        "groundspeed_m_s": vehicle.get_speed(),
+                        "chan3_raw":       vehicle.get_rc_channel()
                     }),
                     timeout=3
                 )
@@ -113,15 +115,23 @@ class Vehicle:
         self.reroute_thread
 
     def get_location(self):
-        self.telemetry.wait('VFR_HUD')
         self.telemetry.wait('GPS_RAW_INT')
+        self.telemetry.wait('GLOBAL_POSITION_INT')
         return Location(self.telemetry.lat,
                         self.telemetry.lng,
                         self.telemetry.alt).__dict__
 
+    def get_speed(self):
+        self.telemetry.wait('VFR_HUD')
+        return self.telemetry.groundspeed
+
     def get_heading(self):
         self.telemetry.wait('VFR_HUD')
         return self.telemetry.heading
+
+    def get_rc_channel(self):
+        self.telemetry.wait('RC_CHANNELS_RAW')
+        return self.telemetry.chan3_raw
 
     def fly_to(self, lat, lng, alt):
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
