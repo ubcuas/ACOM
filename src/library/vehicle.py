@@ -80,7 +80,7 @@ class Vehicle:
             else:
                 disconnect_timer = False
                 print("RC Connection [OK]")
-            time.sleep(0.1)
+            time.sleep(0.5)
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
@@ -153,7 +153,7 @@ class Vehicle:
         return self.telemetry.groundspeed
 
     def get_heading(self):
-        self.telemetry.wait('VFR_HUD')
+        self.telemetry.wait('GLOBAL_POSITION_INT')
         return self.telemetry.heading
 
     def get_rc_channel(self):
