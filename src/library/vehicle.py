@@ -26,11 +26,15 @@ class Vehicle:
         self.waypoint_loader = None
         self.connecting = False
 
-        # For tracking when to pause logs when input is required for battery_rtl
+        # For tracking when to pause logs (when input is required for battery_rtl)
         self.pause_logs = False
+        # To store logs while they are paused
+        self.store_important_logs = []
 
-        # For exiting threads that don't need to keep running in the case of RTL from the battery or lack of rc connection
+        # For exiting threads that don't need to keep running in the case of RTL from the battery
         self.returning_home = False
+        # Rover status to make sure drop is completed before rtl
+        self.rover_status = "Standby"
 
     # Threaded: Continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
@@ -63,17 +67,21 @@ class Vehicle:
                 else:
                     if self.pause_logs == False:
                         print("[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
+                    else:
+                        self.store_important_logs.append("[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
 
             except Exception as e:
                 if self.pause_logs == False:
                     print("[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
+                else:
+                    self.store_important_logs.append("[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
 
             time.sleep(0.1)
 
     # Threaded: For tracking RC connection and RTL when disconnected for 30s
     def rc_disconnect_monitor(self):
         disconnect_timer = False
-        rc_threshold = 2000
+        rc_threshold = 975
 
         while True:
             # See details in variable declaration above
@@ -87,8 +95,7 @@ class Vehicle:
                 print("[ALERT]    RC Connection     Lost!")
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
-                if self.pause_logs == False:
-                    print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
+                print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
                 if (curr_time - orig_time).total_seconds() > 30:
                     vehicle.set_rtl()
                     self.returning_home = True
@@ -107,10 +114,6 @@ class Vehicle:
         add_time = "A" # Initialize added time to non-number
 
         while True:
-            # See details in variable declaration above
-            if self.returning_home:
-                return
-
             curr_time = datetime.now() # Set current time
             time_delta = (curr_time - takeoff_time).total_seconds()
             if self.pause_logs == False:
@@ -124,29 +127,41 @@ class Vehicle:
                 choice = input("[CRITICAL] Battery          Do you want to extend the flight (y/n)? ")
                 if choice.lower() == "y" or choice.lower() == "yes":
                     while not add_time.isnumeric():
-                        add_time = input("[CRITICAL] Battery            For how many minutes to you want to extend for? ")
+                        add_time = input("[CRITICAL] Battery          For how many minutes to you want to extend for? ")
                         try:
                             time_threshold += (float(add_time) * 60)
                             self.pause_logs = False
+                            print("----------------------------- STORED LOGS -----------------------------")
+                            for log in self.store_important_logs:
+                                print(log)  
                             print("-----------------------------------------------------------------------")
                         except:
                             print("[ERROR]    Battery           Invalid entry")
                 else:
-                    vehicle.set_rtl()
                     self.returning_home = True
+                    while self.rover_status == "In progress":
+                        pass
+                    vehicle.set_rtl()
                     print("-----------------------------------------------------------------------")
                     print("[CRITICAL] Battery           Returning to land")
-                    self.pause_logs = False               
+                    self.pause_logs = False
+                    print("----------------------------- STORED LOGS -----------------------------")
+                    for log in self.store_important_logs:
+                        print(log)
+                    print("-----------------------------------------------------------------------")    
                     return
             time.sleep(1)
 
     # Threaded: Gets the target rover drop-off and initiates drop automatically when the drone reaches that position
     def rover_automation(self):
-        try:
-            arduino = ArduinoConnector()
-            print("[ALERT]    Rover & Winch     Arduino initialized")
-        except Exception as ex:
-            print("[ERROR]    Rover & Winch     ", ex)
+        arduino == None
+
+        while arduino == None:
+            try:
+                arduino = ArduinoConnector()
+                print("[ALERT]    Rover & Winch     Arduino initialized")
+            except Exception as ex:
+                print("[ERROR]    Rover & Winch    ", ex)
 
         # Initialize target location
         target = Location(0, 0, 0)
@@ -162,10 +177,9 @@ class Vehicle:
         allowed_radius = 1.5 # Radius acceptable from target location
 
         while True:
-            # See details in variable declaration above
-            if self.returning_home:
-                # Cancel the airdrop if emergency RTL
-                arduino.sendCommandMessage("AIRDROPCANCEL")
+            # See details in returning_home declaration above
+            # Only exit if the drop has not yet started
+            if self.returning_home and (self.rover_status == "Standby" or self.rover_status == "Completed"):
                 return
             # Get drone location
             try:
@@ -185,6 +199,7 @@ class Vehicle:
                     print("[ALERT]    Rover & Winch     In target distance; Loitering")
 
                     # Send “AIRDROPBEGIN” to the winch
+                    self.rover_status == "In progress"
                     arduino.sendCommandMessage("AIRDROPBEGIN")
                     print("[START]    Rover & Winch     Starting deployment")
 
@@ -194,6 +209,7 @@ class Vehicle:
 
                     # Return to the mission in auto mode
                     vehicle.set_auto()
+                    self.rover_status == "Completed"
                     return
             except:
                 print("[ERROR]    Rover & Winch     Function failure")

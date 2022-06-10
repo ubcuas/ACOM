@@ -10,7 +10,7 @@ class ArduinoConnector():
 
         if self.arduino is None:
             print("[ERROR]    Rover & Winch     Couldn't find payload")
-            raise Exception('[ERROR]    Rover & Winch     Payload not found')
+            raise Exception('Payload not found')
         
     def findPayload(self, serialPort):
         ports = []
