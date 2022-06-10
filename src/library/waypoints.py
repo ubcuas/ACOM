@@ -17,6 +17,8 @@ class Waypoints:
             target_component=self.mavlink_connection.target_component,
         )
 
+        self.airdrop = {"lat": 0, "lng": 0, "alt": 0}
+
     def download_mission_wps(self):
         """Downloads the current mission waypoints"""
         self.mavlink_connection.waypoint_request_list_send()
@@ -27,6 +29,8 @@ class Waypoints:
         homePos = None
         takeoffAlt = None
         rtl = False
+
+        airdrop = self.airdrop
 
         while True:
             if count is None:
@@ -74,7 +78,7 @@ class Waypoints:
             # print('getting next waypoint: ', next_wp.seq + 1)
             self.mavlink_connection.waypoint_request_send(next_wp.seq + 1)
 
-        return {"homePos": homePos, "rtl": rtl, "takeoffAlt": takeoffAlt, "wps": wps}
+        return {"homePos": homePos, "rtl": rtl, "takeoffAlt": takeoffAlt, "airdrop": airdrop, "wps": wps}
 
     def upload_mission_wps(self, waypoints, takeoffAlt, rtl):
         """Uploads the mission waypoints to the flight controller"""
@@ -111,6 +115,10 @@ class Waypoints:
 
         # load in wps
         for waypoint in waypoints:
+            if waypoint["wp_type"] == "airdrop":
+                self.airdrop["lat"] = waypoint["lat"]
+                self.airdrop["lng"] = waypoint["lng"]
+                self.airdrop["alt"] = waypoint["alt"]
             self.waypoint_loader.add(
                 self.generate_mission_item(
                     seqNum,
