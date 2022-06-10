@@ -10,6 +10,7 @@ from src.library.util import get_distance_metres, get_point_further_away, get_de
 import src.library.telemetry
 from src.library.location import Location
 from src.library.waypoints import Waypoints
+from src.library.arduinoconnector import ArduinoConnector
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -101,24 +102,25 @@ class Vehicle:
 
     # Threaded: For tracking flight time and RTL after 20 min (with the option to extend)
     def battery_rtl(self):
-        takeoff_time = datetime.now()
+        takeoff_time = datetime.now() # Initial time
         time_threshold = 1200 # 20 minutes in seconds
-        add_time = "A"
+        add_time = "A" # Initialize added time to non-number
 
         while True:
             # See details in variable declaration above
             if self.returning_home:
                 return
 
-            curr_time = datetime.now()
+            curr_time = datetime.now() # Set current time
             time_delta = (curr_time - takeoff_time).total_seconds()
             if self.pause_logs == False:
                 print("[OK]       Battery           Time since takeoff: ", int(time_delta // 60), "min", round(time_delta % 60), "s")
 
+            # If flying for longer than the threshold then RTL
             if (curr_time - takeoff_time).total_seconds() > time_threshold:
                 print("[CRITICAL] Battery           20 minute timer reached!")
-                self.pause_logs = True
-                print("------------------------------------------------------")
+                self.pause_logs = True # Pause other logs to read terminal input
+                print("-----------------------------------------------------------------------")
                 choice = input("[CRITICAL] Battery          Do you want to extend the flight (y/n)? ")
                 if choice.lower() == "y" or choice.lower() == "yes":
                     while not add_time.isnumeric():
@@ -126,28 +128,30 @@ class Vehicle:
                         try:
                             time_threshold += (float(add_time) * 60)
                             self.pause_logs = False
-                            print("------------------------------------------------------")
+                            print("-----------------------------------------------------------------------")
                         except:
                             print("[ERROR]    Battery           Invalid entry")
                 else:
                     vehicle.set_rtl()
                     self.returning_home = True
-                    print("------------------------------------------------------")
+                    print("-----------------------------------------------------------------------")
                     print("[CRITICAL] Battery           Returning to land")
-                    self.pause_logs = False
-
-                    # Kill rc and rover threads since no longer needed
-                    
+                    self.pause_logs = False               
                     return
             time.sleep(1)
 
     # Threaded: Gets the target rover drop-off and initiates drop automatically when the drone reaches that position
     def rover_automation(self):
-        # Call function to connect to Arduino here (like arduinoconnector.py in Stalker)
-        # Connect to the winch by sending “uas” and reading “uas” returned
+        try:
+            arduino = ArduinoConnector()
+            print("[ALERT]    Rover & Winch     Arduino initialized")
+        except Exception as ex:
+            print("[ERROR]    Rover & Winch     ", ex)
 
+        # Initialize target location
         target = Location(0, 0, 0)
 
+        # Repeatedly look for target location in ACOM's waypoints, continue once found
         while target.lat == 0 and target.lng == 0 and target.alt == 0:
             target = Location(self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
             if self.pause_logs == False:
@@ -155,32 +159,37 @@ class Vehicle:
             time.sleep(1)
         print("[ALERT]    Rover & Winch     Target position found!")
 
-        # Will need to get target location from Interop mission
-        # target = Location(38.14471510, -76.42795610, 0) # Lat and Long of center of target zone
         allowed_radius = 1.5 # Radius acceptable from target location
 
         while True:
             # See details in variable declaration above
             if self.returning_home:
+                # Cancel the airdrop if emergency RTL
+                arduino.sendCommandMessage("AIRDROPCANCEL")
                 return
-
+            # Get drone location
             try:
                 location = vehicle.get_location()
             except:
                 print("[ERROR]    Rover & Winch     Failed to get location")
             try:
+                # Compare current location to fetched drop location
                 curr_loc = Location(location["lat"], location["lng"], location["alt"])
                 dist = get_distance_metres(target, curr_loc)
                 if self.pause_logs == False:
                     print("[OK]       Rover & Winch     distance from target: ", round(dist, 2), "m")
+                # Initiate commands if within the target drop location radius
                 if dist < allowed_radius:
+                    # Loiter the drone
                     vehicle.set_loiter()
                     print("[ALERT]    Rover & Winch     In target distance; Loitering")
 
                     # Send “AIRDROPBEGIN” to the winch
+                    arduino.sendCommandMessage("AIRDROPBEGIN")
                     print("[START]    Rover & Winch     Starting deployment")
 
                     # Wait for winch to return “AIRDROPCOMPLETE”
+                    arduino.listenSuccessMessage()
                     print("[FINISH]   Rover & Winch     Task completed")
 
                     # Return to the mission in auto mode
