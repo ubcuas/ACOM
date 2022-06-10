@@ -26,9 +26,12 @@ class Vehicle:
         self.connecting = False
 
         # For tracking when to pause logs when input is required for battery_rtl
-        self.waiting_on_input = False
+        self.pause_logs = False
 
-    # used in a thread to continuously post telemetry data to GCOM-X
+        # For exiting threads that don't need to keep running in the case of RTL from the battery or lack of rc connection
+        self.returning_home = False
+
+    # Threaded: Continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
         while True:
             try:
@@ -54,77 +57,138 @@ class Vehicle:
                 )
 
                 if gcom_telemetry_post.status_code == 200:
-                    if self.waiting_on_input == False:
-                        print("[OK]       GCOM-X telemetry POST")
+                    if self.pause_logs == False:
+                        print("[OK]       GCOM-X Telemetry  POST")
                 else:
-                    if self.waiting_on_input == False:
-                        print("[FAIL]     GCOM-X telemetry POST: " + str(gcom_telemetry_post.status_code))
+                    if self.pause_logs == False:
+                        print("[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
 
             except Exception as e:
-                if self.waiting_on_input == False:
-                    print("[ERROR]    Exception encountered within GCOM POST thread: " + str(e))
+                if self.pause_logs == False:
+                    print("[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
 
             time.sleep(0.1)
 
-    # For tracking RC connection and RTL when disconnected for 30s
+    # Threaded: For tracking RC connection and RTL when disconnected for 30s
     def rc_disconnect_monitor(self):
         disconnect_timer = False
-        rc_threshold = 975
+        rc_threshold = 2000
 
         while True:
+            # See details in variable declaration above
+            if self.returning_home:
+                return
+
             channel = vehicle.get_rc_channel()
             if channel < rc_threshold and disconnect_timer == False:
                 disconnect_timer = True
                 orig_time = datetime.now()
-                print("[ALERT]    RC Connection Lost!")
+                print("[ALERT]    RC Connection     Lost!")
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
-                if self.waiting_on_input == False:
-                    print("[ALERT]    RC Connection: ", round((curr_time - orig_time).total_seconds(),1))
+                if self.pause_logs == False:
+                    print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
                 if (curr_time - orig_time).total_seconds() > 30:
                     vehicle.set_rtl()
-                    print("[EXPIRED]  RC Connection: Aircraft returning home to land")
+                    self.returning_home = True
+                    print("[EXPIRED]  RC Connection     Aircraft returning home to land!")
                     return
             else:
                 disconnect_timer = False
-                if self.waiting_on_input == False:
+                if self.pause_logs == False:
                     print("[OK]       RC Connection")
             time.sleep(0.5)
 
-    # For tracking flight time and RTL after 20 min (with the option to extend)
+    # Threaded: For tracking flight time and RTL after 20 min (with the option to extend)
     def battery_rtl(self):
         takeoff_time = datetime.now()
-        time_threshold = 10 #1200 # 20 minutes in seconds
+        time_threshold = 1200 # 20 minutes in seconds
         add_time = "A"
 
         while True:
+            # See details in variable declaration above
+            if self.returning_home:
+                return
+
             curr_time = datetime.now()
             time_delta = (curr_time - takeoff_time).total_seconds()
-            if self.waiting_on_input == False:
-                print("[OK]       Battery  - Time since takeoff: ", int(time_delta // 60), "min", round(time_delta % 60), "s")
+            if self.pause_logs == False:
+                print("[OK]       Battery           Time since takeoff: ", int(time_delta // 60), "min", round(time_delta % 60), "s")
 
             if (curr_time - takeoff_time).total_seconds() > time_threshold:
-                print("[CRITICAL] Battery - 20 minute timer reached!")
-                self.waiting_on_input = True
+                print("[CRITICAL] Battery           20 minute timer reached!")
+                self.pause_logs = True
                 print("------------------------------------------------------")
-                choice = input("[CRITICAL] Do you want to extend the flight (y/n)? ")
+                choice = input("[CRITICAL] Battery          Do you want to extend the flight (y/n)? ")
                 if choice.lower() == "y" or choice.lower() == "yes":
                     while not add_time.isnumeric():
-                        add_time = input("[CRITICAL] For how many minutes to you want to extend for? ")
+                        add_time = input("[CRITICAL] Battery            For how many minutes to you want to extend for? ")
                         try:
                             time_threshold += (float(add_time) * 60)
-                            self.waiting_on_input = False
+                            self.pause_logs = False
                             print("------------------------------------------------------")
                         except:
-                            print("[ERROR]    Invalid entry")
+                            print("[ERROR]    Battery           Invalid entry")
                 else:
                     vehicle.set_rtl()
+                    self.returning_home = True
                     print("------------------------------------------------------")
-                    print("[CRITICAL] Battery - Returning to land")
-                    self.waiting_on_input = False
+                    print("[CRITICAL] Battery           Returning to land")
+                    self.pause_logs = False
+
+                    # Kill rc and rover threads since no longer needed
+                    
                     return
             time.sleep(1)
 
+    # Threaded: Gets the target rover drop-off and initiates drop automatically when the drone reaches that position
+    def rover_automation(self):
+        # Call function to connect to Arduino here (like arduinoconnector.py in Stalker)
+        # Connect to the winch by sending “uas” and reading “uas” returned
+
+        target = Location(0, 0, 0)
+
+        while target.lat == 0 and target.lng == 0 and target.alt == 0:
+            target = Location(self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
+            if self.pause_logs == False:
+                print("[ALERT]    Rover & Winch     Waiting for target position")
+            time.sleep(1)
+        print("[ALERT]    Rover & Winch     Target position found!")
+
+        # Will need to get target location from Interop mission
+        # target = Location(38.14471510, -76.42795610, 0) # Lat and Long of center of target zone
+        allowed_radius = 1.5 # Radius acceptable from target location
+
+        while True:
+            # See details in variable declaration above
+            if self.returning_home:
+                return
+
+            try:
+                location = vehicle.get_location()
+            except:
+                print("[ERROR]    Rover & Winch     Failed to get location")
+            try:
+                curr_loc = Location(location["lat"], location["lng"], location["alt"])
+                dist = get_distance_metres(target, curr_loc)
+                if self.pause_logs == False:
+                    print("[OK]       Rover & Winch     distance from target: ", round(dist, 2), "m")
+                if dist < allowed_radius:
+                    vehicle.set_loiter()
+                    print("[ALERT]    Rover & Winch     In target distance; Loitering")
+
+                    # Send “AIRDROPBEGIN” to the winch
+                    print("[START]    Rover & Winch     Starting deployment")
+
+                    # Wait for winch to return “AIRDROPCOMPLETE”
+                    print("[FINISH]   Rover & Winch     Task completed")
+
+                    # Return to the mission in auto mode
+                    vehicle.set_auto()
+                    return
+            except:
+                print("[ERROR]    Rover & Winch     Function failure")
+            time.sleep(0.1)
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
@@ -154,6 +218,8 @@ class Vehicle:
                 rc_disconnect_monitor_thread.start()
                 battery_rtl_thread = threading.Thread(target = self.battery_rtl, daemon=True)
                 battery_rtl_thread.start()
+                rover_automation_thread = threading.Thread(target = self.rover_automation, daemon=True)
+                rover_automation_thread.start()
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
@@ -179,6 +245,9 @@ class Vehicle:
 
     def set_rtl(self):
         vehicle.mavlink_connection.set_mode('RTL')
+
+    def set_loiter(self):
+        vehicle.mavlink_connection.set_mode('LOITER')
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(target = self.start_reroute, args=[points], daemon=True)
