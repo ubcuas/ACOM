@@ -25,6 +25,9 @@ class Vehicle:
         self.waypoint_loader = None
         self.connecting = False
 
+        # For tracking when to pause logs when input is required for battery_rtl
+        self.waiting_on_input = False
+
     # used in a thread to continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
         while True:
@@ -51,15 +54,19 @@ class Vehicle:
                 )
 
                 if gcom_telemetry_post.status_code == 200:
-                    print("GCOM-X telemetry POST [OK]")
+                    if self.waiting_on_input == False:
+                        print("[OK]       GCOM-X telemetry POST")
                 else:
-                    print("GCOM-X telemetry POST [FAIL]: " + str(gcom_telemetry_post.status_code))
+                    if self.waiting_on_input == False:
+                        print("[FAIL]     GCOM-X telemetry POST: " + str(gcom_telemetry_post.status_code))
 
             except Exception as e:
-                print("Exception encountered within GCOM POST thread: " + str(e))
+                if self.waiting_on_input == False:
+                    print("[ERROR]    Exception encountered within GCOM POST thread: " + str(e))
 
             time.sleep(0.1)
 
+    # For tracking RC connection and RTL when disconnected for 30s
     def rc_disconnect_monitor(self):
         disconnect_timer = False
         rc_threshold = 975
@@ -69,18 +76,55 @@ class Vehicle:
             if channel < rc_threshold and disconnect_timer == False:
                 disconnect_timer = True
                 orig_time = datetime.now()
-                print("RC Connection Lost!")
+                print("[ALERT]    RC Connection Lost!")
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
-                print("RC Connection [Disconnected]: ", round((curr_time - orig_time).total_seconds(),1))
+                if self.waiting_on_input == False:
+                    print("[ALERT]    RC Connection: ", round((curr_time - orig_time).total_seconds(),1))
                 if (curr_time - orig_time).total_seconds() > 30:
                     vehicle.set_rtl()
-                    print("RC Connection [Expired]: Aircraft returning home to land")
+                    print("[EXPIRED]  RC Connection: Aircraft returning home to land")
                     return
             else:
                 disconnect_timer = False
-                print("RC Connection [OK]")
+                if self.waiting_on_input == False:
+                    print("[OK]       RC Connection")
             time.sleep(0.5)
+
+    # For tracking flight time and RTL after 20 min (with the option to extend)
+    def battery_rtl(self):
+        takeoff_time = datetime.now()
+        time_threshold = 10 #1200 # 20 minutes in seconds
+        add_time = "A"
+
+        while True:
+            curr_time = datetime.now()
+            time_delta = (curr_time - takeoff_time).total_seconds()
+            if self.waiting_on_input == False:
+                print("[OK]       Battery  - Time since takeoff: ", int(time_delta // 60), "min", round(time_delta % 60), "s")
+
+            if (curr_time - takeoff_time).total_seconds() > time_threshold:
+                print("[CRITICAL] Battery - 20 minute timer reached!")
+                self.waiting_on_input = True
+                print("------------------------------------------------------")
+                choice = input("[CRITICAL] Do you want to extend the flight (y/n)? ")
+                if choice.lower() == "y" or choice.lower() == "yes":
+                    while not add_time.isnumeric():
+                        add_time = input("[CRITICAL] For how many minutes to you want to extend for? ")
+                        try:
+                            time_threshold += (float(add_time) * 60)
+                            self.waiting_on_input = False
+                            print("------------------------------------------------------")
+                        except:
+                            print("[ERROR]    Invalid entry")
+                else:
+                    vehicle.set_rtl()
+                    print("------------------------------------------------------")
+                    print("[CRITICAL] Battery - Returning to land")
+                    self.waiting_on_input = False
+                    return
+            time.sleep(1)
+
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
@@ -108,6 +152,8 @@ class Vehicle:
                 post_to_gcom_thread.start()
                 rc_disconnect_monitor_thread = threading.Thread(target = self.rc_disconnect_monitor, daemon=True)
                 rc_disconnect_monitor_thread.start()
+                battery_rtl_thread = threading.Thread(target = self.battery_rtl, daemon=True)
+                battery_rtl_thread.start()
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
