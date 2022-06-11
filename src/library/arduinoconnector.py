@@ -22,21 +22,20 @@ class ArduinoConnector():
         
         for portName in ports:
             print("[ALERT]    Rover & Winch     Trying port", portName)
-            arduino = serial.Serial(port=portName, baudrate=115200, timeout=1.5, write_timeout=1.5)
+            arduino = serial.Serial(port=portName, baudrate=9600, timeout=1.5, write_timeout=1.5)
             time.sleep(2) # Giving time to Arduino to wake up
 
             try:
-                arduino.write(bytes('uas', 'utf-8')) # Sending 'uas' and expecting to get 'uas' back
+                arduino.write(bytes('uas1', 'utf-8')) # Sending 'uas' and expecting to get 'uas' back
             except serial.SerialTimeoutException: # If we get an exception, the port is not open
                 continue
 
             data = arduino.readline()
-            data = data.decode("utf-8")
-            data = data.strip('\n')
-            data = data.strip('\r')
+            data = data.decode('utf-8')
+            data = data.rstrip()
 
             if data == "uas":
-                print("Found Payload on port", portName)
+                print("[ALERT]    Rover & Winch     Found Payload on port", portName)
                 self.arduino = arduino
                 return
 
