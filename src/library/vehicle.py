@@ -12,6 +12,7 @@ from src.library.location import Location
 from src.library.waypoints import Waypoints
 from src.library.arduinoconnector import ArduinoConnector
 
+from pytimedinput import timedInput
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -111,7 +112,6 @@ class Vehicle:
     def battery_rtl(self):
         takeoff_time = datetime.now() # Initial time
         time_threshold = 1200 # 20 minutes in seconds
-        add_time = "A" # Initialize added time to non-number
 
         while True:
             curr_time = datetime.now() # Set current time
@@ -123,45 +123,47 @@ class Vehicle:
             if (curr_time - takeoff_time).total_seconds() > time_threshold:
                 print("[CRITICAL] Battery           20 minute timer reached!")
                 self.pause_logs = True # Pause other logs to read terminal input
-                print("-----------------------------------------------------------------------")
-                choice = input("[CRITICAL] Battery          Do you want to extend the flight (y/n)? ")
-                if choice.lower() == "y" or choice.lower() == "yes":
-                    while not add_time.isnumeric():
-                        add_time = input("[CRITICAL] Battery          For how many minutes to you want to extend for? ")
-                        try:
-                            time_threshold += (float(add_time) * 60)
-                            self.pause_logs = False
-                            print("----------------------------- STORED LOGS -----------------------------")
-                            for log in self.store_important_logs:
-                                print(log)  
-                            print("-----------------------------------------------------------------------")
-                        except:
-                            print("[ERROR]    Battery           Invalid entry")
+                print("-------------------------------------------------------------------------------")
+                # Timed input entry https://pypi.org/project/pytimedinput/
+                choice, timedOut  = timedInput("[CRITICAL] Battery          Do you want to extend the flight by 2 min (y/n)? ", 60, False, 3)
+                if timedOut == False and (choice.lower() == "y" or choice.lower() == "yes"):
+                    time_threshold += 120
+                    print("--------------------------------- STORED LOGS ---------------------------------")
+                    for log in self.store_important_logs:
+                        print(log)  
+                    self.store_important_logs.clear()
+                    print("-------------------------------------------------------------------------------")
+                    self.pause_logs = False
                 else:
                     self.returning_home = True
                     while self.rover_status == "In progress":
                         pass
                     vehicle.set_rtl()
-                    print("-----------------------------------------------------------------------")
+                    print("-------------------------------------------------------------------------------")
                     print("[CRITICAL] Battery           Returning to land")
-                    self.pause_logs = False
-                    print("----------------------------- STORED LOGS -----------------------------")
+                    print("--------------------------------- STORED LOGS ---------------------------------")
                     for log in self.store_important_logs:
                         print(log)
-                    print("-----------------------------------------------------------------------")    
+                    self.store_important_logs.clear()
+                    print("-------------------------------------------------------------------------------") 
+                    self.pause_logs = False   
                     return
             time.sleep(1)
 
     # Threaded: Gets the target rover drop-off and initiates drop automatically when the drone reaches that position
     def rover_automation(self):
-        arduino == None
+        arduino = None
 
         while arduino == None:
             try:
                 arduino = ArduinoConnector()
                 print("[ALERT]    Rover & Winch     Arduino initialized")
             except Exception as ex:
-                print("[ERROR]    Rover & Winch    ", ex)
+                if self.pause_logs == False:
+                    print("[ERROR]    Rover & Winch    ", ex)
+                else:
+                    self.store_important_logs.append("[ERROR]    Rover & Winch    " + str(ex))
+            time.sleep(1)
 
         # Initialize target location
         target = Location(0, 0, 0)
