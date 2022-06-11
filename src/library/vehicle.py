@@ -83,6 +83,7 @@ class Vehicle:
     def rc_disconnect_monitor(self):
         disconnect_timer = False
         rc_threshold = 975
+        time_limit = 30 # 30s buffer from rc disconnect
 
         while True:
             # See details in variable declaration above
@@ -97,7 +98,7 @@ class Vehicle:
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
                 print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
-                if (curr_time - orig_time).total_seconds() > 30:
+                if (curr_time - orig_time).total_seconds() > time_limit:
                     vehicle.set_rtl()
                     self.returning_home = True
                     print("[EXPIRED]  RC Connection     Aircraft returning home to land!")
