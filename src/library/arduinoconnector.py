@@ -79,6 +79,8 @@ class ArduinoConnector():
 
             if data == "AIRDROPCOMPLETE":
                 return
+            elif data == "AIRDROPERROR":
+                print("[ALERT]    Rover & Winch     Drop failed; retrying")
 
 
 if __name__ == '__main__':
