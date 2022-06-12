@@ -11,6 +11,7 @@ import sys
 
 aircraft = Blueprint("aircraft", __name__)
 
+
 # decorator that checks if a mavlink connection has been established
 def connection_required(f):
     @wraps(f)
@@ -47,15 +48,13 @@ def aircraft_connect():
     return jsonify({"msg": "Connected to the aircraft successfully"}), 201
 
 
-# Recieves an array of waypoints
+# Receives an array of waypoints
 # Interrupts aircraft auto mode, switches to guided, runs waypoints, then returns to auto
 @aircraft.route("/reroute", methods=["POST"])
 @connection_required
 def aircraft_reroute():
     json = request.json
-
     points = json["waypoints"]
-
     vehicle.reroute(points)
     return aircraft_gps()
 
@@ -65,7 +64,6 @@ def aircraft_reroute():
 @connection_required
 def aircraft_arm():
     vehicle.arm()
-
     return aircraft_heartbeat()[0], 201
 
 
@@ -74,7 +72,6 @@ def aircraft_arm():
 @connection_required
 def aircraft_disarm():
     vehicle.disarm()
-
     return aircraft_heartbeat()[0], 201
 
 
@@ -117,6 +114,14 @@ def aircraft_guided():
     return aircraft_heartbeat()
 
 
+# set mode to loiter
+@aircraft.route("/loiter", methods=["PUT"])
+@connection_required
+def aircraft_loiter():
+    vehicle.mavlink_connection.set_mode_loiter()
+    return aircraft_heartbeat()
+
+
 # Request flight mode
 @aircraft.route("/telemetry/flightmode", methods=["GET"])
 @connection_required
@@ -132,6 +137,7 @@ def aircraft_gps():
     location = vehicle.telemetry.get_location()
     return jsonify(location), 200
 
+
 @aircraft.route("/telemetry/gps_with_timestamp", methods=["GET"])
 @connection_required
 def aircraft_gps_with_timestamp():
@@ -139,6 +145,7 @@ def aircraft_gps_with_timestamp():
     # the timestamp is specifically for SkyPasta which requires a timestamp to be given along with the telemetry data
     location['timestamp'] = int(time.time())  # get the current unix timestamp
     return jsonify(location), 200
+
 
 # Request heartbeat data
 @aircraft.route("/telemetry/heartbeat", methods=["GET"])

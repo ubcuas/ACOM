@@ -311,6 +311,9 @@ class Vehicle:
     def set_loiter(self):
         vehicle.mavlink_connection.set_mode('LOITER')
 
+    def set_pos_hold(self):
+        vehicle.mavlink_connection.set_mode('POS_HOLD')
+
     def reroute(self, points):
         self.reroute_thread = threading.Thread(
             target=self.start_reroute, args=[points], daemon=True)
