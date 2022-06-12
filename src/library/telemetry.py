@@ -157,7 +157,7 @@ class Telemetry:
 
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
-            self.alt = msg.alt / 1000
+            self.alt = msg.relative_alt / 1000 + 142 * 0.3048 # Use relative alt + MSL at base alt
             self.heading = msg.hdg / 100
 
         @self.event.on("VFR_HUD")
@@ -175,7 +175,7 @@ class Telemetry:
 
         # @self.event.on("SCALED_PRESSURE")
         # def alt_listener(msg):
-        #     self.alt = msg.press_diff * 8.321371362
+        #     self.alt = msg.press_abs
 
     # set a message interval for a specific mavlink message
     def set_message_interval(self, messageid, interval):
