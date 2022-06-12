@@ -19,6 +19,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
 
+
 class Vehicle:
     def __init__(self):
         self.reroute_thread = None
@@ -50,7 +51,8 @@ class Vehicle:
 
                 gcom_telemetry_post = http.post(
                     GCOM_TELEMETRY_ENDPOINT,
-                    headers={ 'content-type': 'application/json', 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0' },
+                    headers={'content-type': 'application/json',
+                             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0'},
                     data=json.dumps({
                         "latitude_dege7":  location["lat"]*10**7,
                         "longitude_dege7": location["lng"]*10**7,
@@ -67,15 +69,19 @@ class Vehicle:
                         print("[OK]       GCOM-X Telemetry  POST")
                 else:
                     if self.pause_logs == False:
-                        print("[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
+                        print("[FAIL]     GCOM-X Telemetry  POST: " +
+                              str(gcom_telemetry_post.status_code))
                     else:
-                        self.store_important_logs.append("[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
+                        self.store_important_logs.append(
+                            "[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
 
             except Exception as e:
                 if self.pause_logs == False:
-                    print("[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
+                    print(
+                        "[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
                 else:
-                    self.store_important_logs.append("[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
+                    self.store_important_logs.append(
+                        "[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
 
             time.sleep(0.1)
 
@@ -83,7 +89,7 @@ class Vehicle:
     def rc_disconnect_monitor(self):
         disconnect_timer = False
         rc_threshold = 975
-        time_limit = 30 # 30s buffer from rc disconnect
+        time_limit = 30  # 30s buffer from rc disconnect
         return_triggered = False
 
         while True:
@@ -98,16 +104,18 @@ class Vehicle:
                 print("[ALERT]    RC Connection     Lost!")
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
-                print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
+                print("[ALERT]    RC Connection     Disconnected:", round(
+                    (curr_time - orig_time).total_seconds(), 1), "s")
                 if (curr_time - orig_time).total_seconds() > time_limit and return_triggered == False:
                     while self.rover_status == "In progress":
                         pass
                     vehicle.set_rtl()
-                    print("[EXPIRED]  RC Connection     Aircraft returning home to land!")
+                    print(
+                        "[EXPIRED]  RC Connection     Aircraft returning home to land!")
                     return_triggered = True
             else:
                 disconnect_timer = False
-                if vehicle.mavlink_connection.flightmode == "RTL" and returning_home == True:
+                if vehicle.mavlink_connection.flightmode == "RTL" and self.returning_home == True:
                     return_triggered = False
                     vehicle.set_loiter()
                 if self.pause_logs == False:
@@ -116,43 +124,51 @@ class Vehicle:
 
     # Threaded: For tracking flight time and RTL after 20 min (with the option to extend)
     def battery_rtl(self):
-        takeoff_time = datetime.now() # Initial time
-        time_threshold = 1200 # 20 minutes in seconds
+        takeoff_time = datetime.now()  # Initial time
+        time_threshold = 1200  # 20 minutes in seconds
 
         while True:
-            curr_time = datetime.now() # Set current time
+            curr_time = datetime.now()  # Set current time
             time_delta = (curr_time - takeoff_time).total_seconds()
             if self.pause_logs == False:
-                print("[OK]       Battery           Time since takeoff: ", int(time_delta // 60), "min", round(time_delta % 60), "s")
+                print("[OK]       Battery           Time since start: ", int(
+                    time_delta // 60), "min", round(time_delta % 60), "s")
 
             # If flying for longer than the threshold then RTL
             if (curr_time - takeoff_time).total_seconds() > time_threshold:
                 print("[CRITICAL] Battery           20 minute timer reached!")
-                self.pause_logs = True # Pause other logs to read terminal input
-                print("-------------------------------------------------------------------------------")
+                self.pause_logs = True  # Pause other logs to read terminal input
+                print(
+                    "-------------------------------------------------------------------------------")
                 # Timed input entry https://pypi.org/project/pytimedinput/
-                choice, timedOut  = timedInput("[CRITICAL] Battery          Do you want to extend the flight by 2 min (y/n)? ", 60, False, 3)
+                choice, timedOut = timedInput(
+                    "[CRITICAL] Battery          Do you want to extend the flight by 2 min (y/n)? ", 60, False, 3)
                 if timedOut == False and (choice.lower() == "y" or choice.lower() == "yes"):
                     time_threshold += 120
-                    print("--------------------------------- STORED LOGS ---------------------------------")
+                    print(
+                        "--------------------------------- STORED LOGS ---------------------------------")
                     for log in self.store_important_logs:
-                        print(log)  
+                        print(log)
                     self.store_important_logs.clear()
-                    print("-------------------------------------------------------------------------------")
+                    print(
+                        "-------------------------------------------------------------------------------")
                     self.pause_logs = False
                 else:
                     self.returning_home = True
                     while self.rover_status == "In progress":
                         pass
                     vehicle.set_rtl()
-                    print("-------------------------------------------------------------------------------")
+                    print(
+                        "-------------------------------------------------------------------------------")
                     print("[CRITICAL] Battery           Returning to land")
-                    print("--------------------------------- STORED LOGS ---------------------------------")
+                    print(
+                        "--------------------------------- STORED LOGS ---------------------------------")
                     for log in self.store_important_logs:
                         print(log)
                     self.store_important_logs.clear()
-                    print("-------------------------------------------------------------------------------") 
-                    self.pause_logs = False   
+                    print(
+                        "-------------------------------------------------------------------------------")
+                    self.pause_logs = False
                     return
             time.sleep(1)
 
@@ -168,7 +184,8 @@ class Vehicle:
                 if self.pause_logs == False:
                     print("[ERROR]    Rover & Winch    ", ex)
                 else:
-                    self.store_important_logs.append("[ERROR]    Rover & Winch    " + str(ex))
+                    self.store_important_logs.append(
+                        "[ERROR]    Rover & Winch    " + str(ex))
             time.sleep(1)
 
         # Initialize target location
@@ -176,13 +193,14 @@ class Vehicle:
 
         # Repeatedly look for target location in ACOM's waypoints, continue once found
         while target.lat == 0 and target.lng == 0 and target.alt == 0:
-            target = Location(self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
+            target = Location(
+                self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
             if self.pause_logs == False:
                 print("[ALERT]    Rover & Winch     Waiting for target position")
             time.sleep(1)
         print("[ALERT]    Rover & Winch     Target position found!")
 
-        allowed_radius = 1.5 # Radius acceptable from target location
+        allowed_radius = 1.5  # Radius acceptable from target location
 
         while True:
             # See details in returning_home declaration above
@@ -196,15 +214,18 @@ class Vehicle:
                 print("[ERROR]    Rover & Winch     Failed to get location")
             try:
                 # Compare current location to fetched drop location
-                curr_loc = Location(location["lat"], location["lng"], location["alt"])
+                curr_loc = Location(
+                    location["lat"], location["lng"], location["alt"])
                 dist = get_distance_metres(target, curr_loc)
                 if self.pause_logs == False:
-                    print("[OK]       Rover & Winch     Distance from target: ", round(dist, 2), "m")
+                    print("[OK]       Rover & Winch     Distance from target: ", round(
+                        dist, 2), "m")
                 # Initiate commands if within the target drop location radius
                 if dist < allowed_radius:
                     # Loiter the drone
                     vehicle.set_loiter()
-                    print("[ALERT]    Rover & Winch     In target distance; Loitering")
+                    print(
+                        "[ALERT]    Rover & Winch     In target distance; Loitering")
 
                     # Send “AIRDROPBEGIN” to the winch
                     self.rover_status == "In progress"
@@ -226,15 +247,19 @@ class Vehicle:
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
             self.connecting = True
-            current_app.logger.info("Mavlink connection is now being initialized")
+            current_app.logger.info(
+                "Mavlink connection is now being initialized")
             if connection == "tcp":
-                self.mavlink_connection = mavutil.mavlink_connection(connection + ':' + address + ':' + str(port))
+                self.mavlink_connection = mavutil.mavlink_connection(
+                    connection + ':' + address + ':' + str(port))
             elif connection == "serial":
-                self.mavlink_connection = mavutil.mavlink_connection(address, baud=baud)
+                self.mavlink_connection = mavutil.mavlink_connection(
+                    address, baud=baud)
             else:
                 raise Exception("Invalid connection type")
             self.mavlink_connection.wait_heartbeat(timeout=5)
-            current_app.logger.info("Heartbeat from system (system %u component %u)" % (self.mavlink_connection.target_system, self.mavlink_connection.target_component))
+            current_app.logger.info("Heartbeat from system (system %u component %u)" % (
+                self.mavlink_connection.target_system, self.mavlink_connection.target_component))
             # init telemetry
             self.telemetry = src.library.telemetry.Telemetry(self)
 
@@ -245,13 +270,17 @@ class Vehicle:
             # begin eternally posting telemetry to GCOM
             # via an eternal thread
             with current_app.app_context():
-                post_to_gcom_thread = threading.Thread(target = self.post_to_gcom, daemon=True)
+                post_to_gcom_thread = threading.Thread(
+                    target=self.post_to_gcom, daemon=True)
                 post_to_gcom_thread.start()
-                rc_disconnect_monitor_thread = threading.Thread(target = self.rc_disconnect_monitor, daemon=True)
+                rc_disconnect_monitor_thread = threading.Thread(
+                    target=self.rc_disconnect_monitor, daemon=True)
                 rc_disconnect_monitor_thread.start()
-                battery_rtl_thread = threading.Thread(target = self.battery_rtl, daemon=True)
+                battery_rtl_thread = threading.Thread(
+                    target=self.battery_rtl, daemon=True)
                 battery_rtl_thread.start()
-                winch_automation_thread = threading.Thread(target = self.winch_automation, daemon=True)
+                winch_automation_thread = threading.Thread(
+                    target=self.winch_automation, daemon=True)
                 winch_automation_thread.start()
 
         if self.mavlink_connection.target_system < 1:
@@ -283,7 +312,8 @@ class Vehicle:
         vehicle.mavlink_connection.set_mode('LOITER')
 
     def reroute(self, points):
-        self.reroute_thread = threading.Thread(target = self.start_reroute, args=[points], daemon=True)
+        self.reroute_thread = threading.Thread(
+            target=self.start_reroute, args=[points], daemon=True)
         self.reroute_thread.start()
 
     def stop_reroute(self):
@@ -311,17 +341,17 @@ class Vehicle:
     def fly_to(self, lat, lng, alt):
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
         self.mavlink_connection.mav.mission_item_send(0, 0, 0, frame,
-            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            2, # current wp - guided command
-            0,
-            0,
-            0,
-            0,
-            0,
-            lat,
-            lng,
-            alt
-        )
+                                                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                                                      2,  # current wp - guided command
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      lat,
+                                                      lng,
+                                                      alt
+                                                      )
 
     def start_reroute(self, points):
         self.set_guided()
@@ -336,13 +366,15 @@ class Vehicle:
             alt = point["alt"]
 
             gps_data = self.get_location()
-            current_location = Location(gps_data['lat'], gps_data['lng'], gps_data['alt'])
+            current_location = Location(
+                gps_data['lat'], gps_data['lng'], gps_data['alt'])
 
             target_location = Location(lat, lng, alt)
-            sharp_turn = get_degrees_needed_to_turn(self.get_heading(), current_location, target_location) > 80
+            sharp_turn = get_degrees_needed_to_turn(
+                self.get_heading(), current_location, target_location) > 80
 
-
-            overShootLocation = get_point_further_away(current_location, target_location, 40)
+            overShootLocation = get_point_further_away(
+                current_location, target_location, 40)
             overshoot_lat = overShootLocation.lat
             overshoot_lng = overShootLocation.lng
             overshoot_alt = overShootLocation.alt
@@ -355,22 +387,26 @@ class Vehicle:
             # else:
             #     self.fly_to(overshoot_lat, overshoot_lng, overshoot_alt)
 
-            self.fly_to(target_location.lat, target_location.lng, target_location.alt)
+            self.fly_to(target_location.lat,
+                        target_location.lng, target_location.alt)
 
-            while True: #!!! TO-DO Change True to while vehicle is in guided mode
+            while True:  # !!! TO-DO Change True to while vehicle is in guided mode
                 # if a new reroute task has been started, exit this one
                 if threading.get_ident() != self.reroute_thread.ident:
                     print("Reroute task cancelled")
                     return
 
                 self.telemetry.wait('GPS_RAW_INT')
-                current_location = Location(self.telemetry.lat, self.telemetry.lng, self.telemetry.alt)
+                current_location = Location(
+                    self.telemetry.lat, self.telemetry.lng, self.telemetry.alt)
 
-                remainingDistance = get_distance_metres(current_location, target_location)
+                remainingDistance = get_distance_metres(
+                    current_location, target_location)
                 print("Distance to target: " + str(remainingDistance))
-                if remainingDistance <= 1: #Just below target, in case of undershoot.
+                if remainingDistance <= 1:  # Just below target, in case of undershoot.
                     print("Reached waypoint")
                     break
         self.set_auto()
+
 
 vehicle = Vehicle()
