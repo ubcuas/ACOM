@@ -156,8 +156,8 @@ class Vehicle:
                     return
             time.sleep(1)
 
-    # Threaded: Gets the target rover drop-off and initiates drop automatically when the drone reaches that position
-    def rover_automation(self):
+    # Threaded: Gets the target winch drop-off and initiates drop automatically when the drone reaches that position
+    def winch_automation(self):
         arduino = None
 
         while arduino == None:
@@ -212,7 +212,7 @@ class Vehicle:
                     print("[START]    Rover & Winch     Starting deployment")
 
                     # Wait for winch to return “AIRDROPCOMPLETE”
-                    arduino.listenSuccessMessage()
+                    arduino.listenSuccessMessage()                           
                     print("[FINISH]   Rover & Winch     Task completed")
 
                     # Return to the mission in auto mode
@@ -251,8 +251,8 @@ class Vehicle:
                 rc_disconnect_monitor_thread.start()
                 battery_rtl_thread = threading.Thread(target = self.battery_rtl, daemon=True)
                 battery_rtl_thread.start()
-                rover_automation_thread = threading.Thread(target = self.rover_automation, daemon=True)
-                rover_automation_thread.start()
+                winch_automation_thread = threading.Thread(target = self.winch_automation, daemon=True)
+                winch_automation_thread.start()
 
         if self.mavlink_connection.target_system < 1:
             raise Exception("Mavlink is not connected")
