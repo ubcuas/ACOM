@@ -84,6 +84,7 @@ class Vehicle:
         disconnect_timer = False
         rc_threshold = 975
         time_limit = 30 # 30s buffer from rc disconnect
+        return_triggered = False
 
         while True:
             # See details in variable declaration above
@@ -98,13 +99,17 @@ class Vehicle:
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
                 print("[ALERT]    RC Connection     Disconnected:", round((curr_time - orig_time).total_seconds(),1), "s")
-                if (curr_time - orig_time).total_seconds() > time_limit:
+                if (curr_time - orig_time).total_seconds() > time_limit and return_triggered == False:
+                    while self.rover_status == "In progress":
+                        pass
                     vehicle.set_rtl()
-                    self.returning_home = True
                     print("[EXPIRED]  RC Connection     Aircraft returning home to land!")
-                    return
+                    return_triggered = True
             else:
                 disconnect_timer = False
+                if vehicle.mavlink_connection.flightmode == "RTL" and returning_home == True:
+                    return_triggered = False
+                    vehicle.set_loiter()
                 if self.pause_logs == False:
                     print("[OK]       RC Connection")
             time.sleep(0.5)
@@ -194,7 +199,7 @@ class Vehicle:
                 curr_loc = Location(location["lat"], location["lng"], location["alt"])
                 dist = get_distance_metres(target, curr_loc)
                 if self.pause_logs == False:
-                    print("[OK]       Rover & Winch     distance from target: ", round(dist, 2), "m")
+                    print("[OK]       Rover & Winch     Distance from target: ", round(dist, 2), "m")
                 # Initiate commands if within the target drop location radius
                 if dist < allowed_radius:
                     # Loiter the drone
