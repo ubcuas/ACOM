@@ -240,8 +240,8 @@ class Vehicle:
                     vehicle.set_auto()
                     self.rover_status == "Completed"
                     return
-            except:
-                print("[ERROR]    Rover & Winch     Function failure")
+            except Exception as e:
+                print("[ERROR]    Rover & Winch     Function failure: ", e)
             time.sleep(0.1)
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
