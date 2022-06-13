@@ -17,7 +17,11 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
+# Testing environment
+# GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
+
+# Production environment
+GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
 
 
 class Vehicle:
@@ -233,7 +237,7 @@ class Vehicle:
                     print("[START]    Rover & Winch     Starting deployment")
 
                     # Wait for winch to return “AIRDROPCOMPLETE”
-                    arduino.listenSuccessMessage()                           
+                    arduino.listenSuccessMessage()
                     print("[FINISH]   Rover & Winch     Task completed")
 
                     # Return to the mission in auto mode
@@ -310,6 +314,9 @@ class Vehicle:
 
     def set_loiter(self):
         vehicle.mavlink_connection.set_mode('LOITER')
+
+    def set_pos_hold(self):
+        vehicle.mavlink_connection.set_mode('POS_HOLD')
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(

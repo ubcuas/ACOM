@@ -11,7 +11,7 @@ class ArduinoConnector():
         if self.arduino is None:
             print("[ERROR]    Rover & Winch     Couldn't find payload")
             raise Exception('Payload not found')
-        
+
     def findPayload(self, serialPort):
         ports = []
         if serialPort == "": # If no port is forced, get all the ports
@@ -19,14 +19,14 @@ class ArduinoConnector():
         else:
             ports.append(serialPort)
         print("[ALERT]    Rover & Winch     Serial Ports:", ports)
-        
+
         for portName in ports:
             print("[ALERT]    Rover & Winch     Trying port", portName)
             arduino = serial.Serial(port=portName, baudrate=9600, timeout=1.5, write_timeout=1.5)
             time.sleep(2) # Giving time to Arduino to wake up
 
             try:
-                arduino.write(bytes('uas1', 'utf-8')) # Sending 'uas' and expecting to get 'uas' back
+                arduino.write(bytes('uas1', 'utf-8')) # Sending 'uas1' and expecting to get 'uas' back
             except serial.SerialTimeoutException: # If we get an exception, the port is not open
                 continue
 
