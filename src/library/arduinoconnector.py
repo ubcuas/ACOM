@@ -4,8 +4,9 @@ import glob
 import time
 
 class ArduinoConnector():
-    def __init__(self, serialPort=""):
+    def __init__(self, vehicle, serialPort=""):
         self.arduino = None
+        self.vehicle = vehicle
         self.findPayload(serialPort) # We need to establish a serial connection with the Arduino
 
         if self.arduino is None:
@@ -80,6 +81,7 @@ class ArduinoConnector():
             if data == "AIRDROPCOMPLETE":
                 return
             elif data == "AIRDROPERROR":
+                self.vehicle.winch_status = 2
                 print("[ALERT]    Rover & Winch     Drop failed; retrying")
 
 

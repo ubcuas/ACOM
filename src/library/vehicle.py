@@ -23,6 +23,14 @@ from requests.packages.urllib3.util.retry import Retry
 # Production environment
 GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
 
+"""
+Winch status
+0 - Disconnected
+1 - Standby
+2 - In Progress
+3 - Error
+4 - Complete
+"""
 
 class Vehicle:
     def __init__(self):
@@ -40,7 +48,7 @@ class Vehicle:
         # For exiting threads that don't need to keep running in the case of RTL from the battery
         self.returning_home = False
         # Rover status to make sure drop is completed before rtl
-        self.rover_status = "Standby"
+        self.winch_status = 0
 
     # Threaded: Continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
@@ -111,7 +119,7 @@ class Vehicle:
                 print("[ALERT]    RC Connection     Disconnected:", round(
                     (curr_time - orig_time).total_seconds(), 1), "s")
                 if (curr_time - orig_time).total_seconds() > time_limit and return_triggered == False:
-                    while self.rover_status == "In progress":
+                    while self.winch_status == 2 or self.winch_status == 3:
                         pass
                     vehicle.set_rtl()
                     print(
@@ -159,7 +167,7 @@ class Vehicle:
                     self.pause_logs = False
                 else:
                     self.returning_home = True
-                    while self.rover_status == "In progress":
+                    while self.winch_status == 2 or self.winch_status == 3:
                         pass
                     vehicle.set_rtl()
                     print(
@@ -182,8 +190,9 @@ class Vehicle:
 
         while arduino == None:
             try:
-                arduino = ArduinoConnector()
+                arduino = ArduinoConnector(self)
                 print("[ALERT]    Rover & Winch     Arduino initialized")
+                self.winch_status = 1
             except Exception as ex:
                 if self.pause_logs == False:
                     print("[ERROR]    Rover & Winch    ", ex)
@@ -209,7 +218,7 @@ class Vehicle:
         while True:
             # See details in returning_home declaration above
             # Only exit if the drop has not yet started
-            if self.returning_home and (self.rover_status == "Standby" or self.rover_status == "Completed"):
+            if self.returning_home and (self.winch_status == 1 or self.winch_status == 4):
                 return
             # Get drone location
             try:
@@ -232,7 +241,7 @@ class Vehicle:
                         "[ALERT]    Rover & Winch     In target distance; Loitering")
 
                     # Send “AIRDROPBEGIN” to the winch
-                    self.rover_status == "In progress"
+                    self.winch_status == 1
                     arduino.sendCommandMessage("AIRDROPBEGIN")
                     print("[START]    Rover & Winch     Starting deployment")
 
@@ -242,7 +251,7 @@ class Vehicle:
 
                     # Return to the mission in auto mode
                     vehicle.set_auto()
-                    self.rover_status == "Completed"
+                    self.winch_status == 3
                     return
             except Exception as e:
                 print("[ERROR]    Rover & Winch     Function failure: ", e)
