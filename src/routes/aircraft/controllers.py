@@ -263,4 +263,4 @@ def setup_mavlink_connection(ip_address, port):
 @connection_required
 def get_winch_status():
     data = vehicle.winch_status
-    return jsonify({"status": data}), 200
+    return jsonify({"winch_status": data}), 200
