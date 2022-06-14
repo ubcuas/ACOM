@@ -258,3 +258,9 @@ def setup_mavlink_connection(ip_address, port):
             vehicle.setup_mavlink_connection('tcp', ip_address, port)
         except Exception:
             abort(400, "Mavlink is not connected")
+
+@aircraft.route("/winchstatus", methods=["GET"])
+@connection_required
+def get_winch_status():
+    data = vehicle.winch_status
+    return jsonify({"status": data}), 200
