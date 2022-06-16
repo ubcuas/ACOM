@@ -235,7 +235,7 @@ class Vehicle:
                 return
             # If emergency reel status initiated then send command and change status
             if self.winch_status == 5:
-                arduino.sendCommandMessage("AIRDROPCANCEL1") #
+                arduino.sendCommandMessage("AIRDROPCANCEL1")
                 self.winch_status = 1
             # Get drone location
             try:

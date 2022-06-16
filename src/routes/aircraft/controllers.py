@@ -269,3 +269,4 @@ def get_winch_status():
 @connection_required
 def send_winch_command():
     vehicle.winch_status = 5
+    return jsonify({"command":5}), 200
