@@ -30,6 +30,7 @@ Winch status
 2 - In Progress
 3 - Error
 4 - Complete
+5 - Emergency Reel
 """
 
 class Vehicle:
@@ -101,7 +102,8 @@ class Vehicle:
     def rc_disconnect_monitor(self):
         disconnect_timer = False
         rc_threshold = 975
-        time_limit = 30  # 30s buffer from rc disconnect
+        rtl_time_limit = 30  # 30s buffer from rc disconnect
+        kill_time_limit = 180 # 180s buffer (3 min)
         return_triggered = False
 
         while True:
@@ -109,25 +111,36 @@ class Vehicle:
             if self.returning_home:
                 return
 
+            # Get RC signal
             channel = vehicle.get_rc_channel()
+            # Initiate an initial value if less than threshold
             if channel < rc_threshold and disconnect_timer == False:
                 disconnect_timer = True
                 orig_time = datetime.now()
                 print("[ALERT]    RC Connection     Lost!")
+            # Compare initial time to current if still disconnected
             elif channel < rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
                 print("[ALERT]    RC Connection     Disconnected:", round(
                     (curr_time - orig_time).total_seconds(), 1), "s")
-                if (curr_time - orig_time).total_seconds() > time_limit and return_triggered == False:
-                    while self.winch_status == 2 or self.winch_status == 3:
-                        pass
+                # Drop out of the sky if RC disconnect for more than 180s (3 min)
+                if (curr_time - orig_time).total_seconds() > kill_time_limit:
+                    vehicle.terminate()
+                # RTL if RC disconnect for more than 30s
+                elif (curr_time - orig_time).total_seconds() > rtl_time_limit and return_triggered == False:
+                    # Don't RTL while winch is in progress
+                    if self.winch_status == 2 or self.winch_status == 3 or self.winch_status == 5:
+                        # Indicate to Arduino function that we need to emergency reel
+                        self.winch_status = 5
                     vehicle.set_rtl()
                     print(
                         "[EXPIRED]  RC Connection     Aircraft returning home to land!")
                     return_triggered = True
             else:
+                # Reset timer if above threshold
                 disconnect_timer = False
-                if vehicle.mavlink_connection.flightmode == "RTL" and self.returning_home == True:
+                # If in RTL mode from RC disconnect set to loiter
+                if vehicle.mavlink_connection.flightmode == "RTL" and return_triggered:
                     return_triggered = False
                     vehicle.set_loiter()
                 if self.pause_logs == False:
@@ -220,6 +233,10 @@ class Vehicle:
             # Only exit if the drop has not yet started
             if self.returning_home and (self.winch_status == 1 or self.winch_status == 4):
                 return
+            # If emergency reel status initiated then send command and change status
+            if self.winch_status == 5:
+                arduino.sendCommandMessage("AIRDROPCANCEL1") #
+                self.winch_status = 1
             # Get drone location
             try:
                 location = vehicle.get_location()
@@ -240,9 +257,9 @@ class Vehicle:
                     print(
                         "[ALERT]    Rover & Winch     In target distance; Loitering")
 
-                    # Send “AIRDROPBEGIN” to the winch
+                    # Send “AIRDROPBEGIN1” to the winch
                     self.winch_status == 1
-                    arduino.sendCommandMessage("AIRDROPBEGIN")
+                    arduino.sendCommandMessage("AIRDROPBEGIN1")
                     print("[START]    Rover & Winch     Starting deployment")
 
                     # Wait for winch to return “AIRDROPCOMPLETE”
@@ -326,6 +343,21 @@ class Vehicle:
 
     def set_pos_hold(self):
         vehicle.mavlink_connection.set_mode('POS_HOLD')
+
+    def terminate(self):
+        vehicle.mavlink_connection.mav.command_long_send(
+            vehicle.mavlink_connection.target_system,
+            vehicle.mavlink_connection.target_component,
+            mavutil.mavlink.MAV_CMD_DO_FLIGHTTERMINATION,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
 
     def reroute(self, points):
         self.reroute_thread = threading.Thread(
