@@ -101,7 +101,7 @@ class Vehicle:
     # Threaded: For tracking RC connection and RTL when disconnected for 30s
     def rc_disconnect_monitor(self):
         disconnect_timer = False
-        rc_threshold = 975
+        rc_threshold = 988
         rtl_time_limit = 30  # 30s buffer from rc disconnect
         kill_time_limit = 180 # 180s buffer (3 min)
         return_triggered = False
@@ -114,12 +114,12 @@ class Vehicle:
             # Get RC signal
             channel = vehicle.get_rc_channel()
             # Initiate an initial value if less than threshold
-            if channel < rc_threshold and disconnect_timer == False:
+            if channel <= rc_threshold and disconnect_timer == False:
                 disconnect_timer = True
                 orig_time = datetime.now()
                 print("[ALERT]    RC Connection     Lost!")
             # Compare initial time to current if still disconnected
-            elif channel < rc_threshold and disconnect_timer:
+            elif channel <= rc_threshold and disconnect_timer:
                 curr_time = datetime.now()
                 print("[ALERT]    RC Connection     Disconnected:", round(
                     (curr_time - orig_time).total_seconds(), 1), "s")
