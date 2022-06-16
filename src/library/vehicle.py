@@ -226,7 +226,7 @@ class Vehicle:
             time.sleep(1)
         print("[ALERT]    Rover & Winch     Target position found!")
 
-        allowed_radius = 1.5  # Radius acceptable from target location
+        allowed_radius = 4  # Radius acceptable from target location
 
         while True:
             # See details in returning_home declaration above
@@ -268,7 +268,7 @@ class Vehicle:
 
                     # Return to the mission in auto mode
                     vehicle.set_auto()
-                    self.winch_status == 3
+                    self.winch_status == 4
                     return
             except Exception as e:
                 print("[ERROR]    Rover & Winch     Function failure: ", e)
