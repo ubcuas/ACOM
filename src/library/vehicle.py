@@ -117,6 +117,7 @@ class Vehicle:
             if channel < rc_threshold and disconnect_timer == False:
                 disconnect_timer = True
                 orig_time = datetime.now()
+                time.sleep(2)
                 print("[ALERT]    RC Connection     Lost!")
             # Compare initial time to current if still disconnected
             elif channel < rc_threshold and disconnect_timer:
@@ -126,6 +127,7 @@ class Vehicle:
                 # Drop out of the sky if RC disconnect for more than 180s (3 min)
                 if (curr_time - orig_time).total_seconds() > kill_time_limit:
                     vehicle.terminate()
+                    print("[ALERT]    RC Connection     FLIGHT TERMINATED!")
                 # RTL if RC disconnect for more than 30s
                 elif (curr_time - orig_time).total_seconds() > rtl_time_limit and return_triggered == False:
                     # Don't RTL while winch is in progress
