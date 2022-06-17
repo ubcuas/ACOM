@@ -31,7 +31,7 @@ run-acom: docker run-dependencies
 	docker run --rm -it -p 5000:5000 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:latest
 
 run-acom-arm: docker-arm run-dependencies
-	docker run --rm --name acom-production -it -p 0.0.0.0:5000:5000 --network=host --device=/dev/ttyACM0 --device=/dev/ttyUSB0 --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
+	docker run --rm --name acom-production -it -p 0.0.0.0:5000:5000 --network=host --device=/dev/ttyACM0 --device=/dev/ttyACM2 --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
 
 run-acom-arm-no-winch: docker-arm run-dependencies
 	docker run --rm --name acom-production -it -p 0.0.0.0:5000:5000 --network=host --device=/dev/ttyACM0 --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
