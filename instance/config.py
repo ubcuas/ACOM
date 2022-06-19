@@ -18,5 +18,5 @@ IP_ADDRESS = "acom-sitl"
 PORT = 5760
 
 # set optional default serial port & baud rate
-# SERIAL_PORT = "COM8"
+# SERIAL_PORT = "/dev/ttyACM0"
 # BAUD_RATE = 115200

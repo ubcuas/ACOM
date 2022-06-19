@@ -9,3 +9,4 @@ observable==1.0.3
 geographiclib==1.50
 requests==2.27.1
 pyserial==3.5
+pytimedinput==2.0.1

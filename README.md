@@ -45,6 +45,17 @@ SERIAL_PORT = "COM8"
 BAUD_RATE = 115200
 ```
 
+### Changing GCOM-X Endpoint
+Depending on whether you are running ACOM locally or on an Odroid you will need to use different telemetry endpoints. In `vehicle.py` you will see the following. Make sure to select the one you need by uncommenting the respective endpoint (local is set by default).
+```py
+
+# Testing environment
+GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
+
+# Production environment
+# GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
+```
+
 ### Giving Docker containers access to serial devices
 Docker containers do not have access to serial devices out of the box. Because of this, we need to give our container permission to access any devices we want to use.
 - Find the name of your serial device (ex. COM8 on Windows || /dev/ttyACM0 on Linux )
