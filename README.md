@@ -55,6 +55,7 @@ GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetr
 # Production environment
 # GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
 ```
+For flight change GCOM endpoint in  etc/config.json 
 
 ### Giving Docker containers access to serial devices
 Docker containers do not have access to serial devices out of the box. Because of this, we need to give our container permission to access any devices we want to use.

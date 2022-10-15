@@ -1,0 +1,4 @@
+{
+    "latitudeOffset": 43.2816,
+    "GCOMEndpoint": "http://host.docker.internal:8080/api/interop/telemetry"
+}

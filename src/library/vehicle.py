@@ -17,11 +17,10 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-# Testing environment
-GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
+with open('config.json', 'r') as f:
+    config = json.load(f)
 
-# Production environment
-# GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
+GCOM_TELEMETRY_ENDPOINT = config["GCOMEndpoint"]
 
 """
 Winch status
@@ -32,6 +31,7 @@ Winch status
 4 - Complete
 5 - Emergency Reel
 """
+
 
 class Vehicle:
     def __init__(self):
@@ -103,7 +103,7 @@ class Vehicle:
         disconnect_timer = False
         rc_threshold = 988
         rtl_time_limit = 30  # 30s buffer from rc disconnect
-        kill_time_limit = 180 # 180s buffer (3 min)
+        kill_time_limit = 180  # 180s buffer (3 min)
         return_triggered = False
 
         while True:
