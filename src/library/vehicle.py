@@ -227,7 +227,8 @@ class Vehicle:
             time.sleep(1)
         print("[ALERT]    Rover & Winch     Target position found!")
 
-        allowed_radius = 1  # Radius acceptable from target location
+        # Radius acceptable from target location, change in config.json file
+        allowed_radius = config["allowedRadius"]
 
         while True:
             # See details in returning_home declaration above
