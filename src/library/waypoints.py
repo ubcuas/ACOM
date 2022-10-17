@@ -55,7 +55,8 @@ class Waypoints:
                     next_wp.command == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
                     and next_wp.seq == 0
                 ):
-                    homePos = {"lat": next_wp.x, "lng": next_wp.y, "alt": next_wp.z}
+                    homePos = {"lat": next_wp.x,
+                               "lng": next_wp.y, "alt": next_wp.z}
 
                 # take off wp
                 elif next_wp.command == mavutil.mavlink.MAV_CMD_NAV_TAKEOFF:
@@ -65,7 +66,8 @@ class Waypoints:
                 elif next_wp.command == mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH:
                     rtl = True
                 else:
-                    wp_json = {"lat": next_wp.x, "lng": next_wp.y, "alt": next_wp.z}
+                    wp_json = {"lat": next_wp.x,
+                               "lng": next_wp.y, "alt": next_wp.z}
                     wps.append(wp_json)
 
             if stored is None or (next_wp and stored.seq != next_wp.seq):
@@ -156,7 +158,8 @@ class Waypoints:
 
         # clear the current wps in the send queue and loads the new set
         self.mavlink_connection.waypoint_clear_all_send()
-        self.mavlink_connection.waypoint_count_send(self.waypoint_loader.count())
+        self.mavlink_connection.waypoint_count_send(
+            self.waypoint_loader.count())
 
         # send wps 1 by 1
         for i in range(self.waypoint_loader.count()):
@@ -166,7 +169,8 @@ class Waypoints:
 
         # get wp count received
         self.mavlink_connection.waypoint_request_list_send()
-        count = int(self.vehicle.telemetry.wait("MISSION_COUNT", timeout=5).count)
+        count = int(self.vehicle.telemetry.wait(
+            "MISSION_COUNT", timeout=5).count)
 
         if count == self.waypoint_loader.count():
             return num_wps_loaded

@@ -4,6 +4,11 @@ from threading import Thread
 import time
 import socket
 
+import json
+
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
 from src.library.util import empty_socket
 
 
@@ -157,13 +162,14 @@ class Telemetry:
 
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
-            self.alt = msg.relative_alt / 1000 + 142 * 0.3048 # Use relative alt + MSL at base alt
+            # Use relative alt + MSL at base alt
+            self.alt = msg.relative_alt / config["latitudeOffset"]
             self.heading = msg.hdg / 100
 
         @self.event.on("VFR_HUD")
         def vfr_listener(msg):
             self.groundspeed = msg.groundspeed
-            
+
         @self.event.on("GPS_RAW_INT")
         def gps_listener(msg):
             self.lat = msg.lat * 1.0e-7
