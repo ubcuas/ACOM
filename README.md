@@ -46,7 +46,7 @@ BAUD_RATE = 115200
 ```
 
 ### Changing GCOM-X Endpoint
-Depending on whether you are running ACOM locally or on an Odroid you will need to use different telemetry endpoints. In `config.json` you will see the following configurable variable. Make sure to select the endpoint you need by replacing the respective endpoint with the one listed below. (local is set by default).
+Depending on whether you are running ACOM locally or on an Odroid you will need to use different telemetry endpoints. In `config.json` you will see the following configurable variable diff. Make sure to select the endpoint you need by replacing the respective endpoint with the one listed below. (local is set by default).
 ```py
 
 # Testing environment
@@ -55,6 +55,9 @@ GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetr
 # Production environment
 GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
 ```
+
+### Enabling Winch
+The winch can be enabled and disabled through accessing `config.json` and modifying the variable "winchEnable". " "winchEnable": true " will allow winch to be used, false will ignore winch code block (Default value is set to false). Do not use if winch is not attached.
 
 ### Giving Docker containers access to serial devices
 Docker containers do not have access to serial devices out of the box. Because of this, we need to give our container permission to access any devices we want to use.

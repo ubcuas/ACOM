@@ -40,14 +40,8 @@ class Vehicle:
         self.telemetry = None
         self.waypoint_loader = None
         self.connecting = False
+        self.winch_enabled = config["winchEnable"]
 
-        # For tracking when to pause logs (when input is required for battery_rtl)
-        self.pause_logs = False
-        # To store logs while they are paused
-        self.store_important_logs = []
-
-        # For exiting threads that don't need to keep running in the case of RTL from the battery
-        self.returning_home = False
         # Rover status to make sure drop is completed before rtl
         self.winch_status = 0
 
@@ -78,23 +72,14 @@ class Vehicle:
                 )
 
                 if gcom_telemetry_post.status_code == 200:
-                    if self.pause_logs == False:
-                        print("[OK]       GCOM-X Telemetry  POST")
+                    print("[OK]       GCOM-X Telemetry  POST")
                 else:
-                    if self.pause_logs == False:
-                        print("[FAIL]     GCOM-X Telemetry  POST: " +
-                              str(gcom_telemetry_post.status_code))
-                    else:
-                        self.store_important_logs.append(
-                            "[FAIL]     GCOM-X Telemetry  POST: " + str(gcom_telemetry_post.status_code))
+                    print("[FAIL]     GCOM-X Telemetry  POST: " +
+                          str(gcom_telemetry_post.status_code))
 
             except Exception as e:
-                if self.pause_logs == False:
-                    print(
-                        "[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
-                else:
-                    self.store_important_logs.append(
-                        "[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
+                print(
+                    "[ERROR]    GCOM-X Telemetry  Exception encountered: " + str(e))
 
             time.sleep(0.1)
 
@@ -104,12 +89,8 @@ class Vehicle:
         rc_threshold = 988
         rtl_time_limit = 30  # 30s buffer from rc disconnect
         kill_time_limit = 180  # 180s buffer (3 min)
-        return_triggered = False
 
         while True:
-            # See details in variable declaration above
-            if self.returning_home:
-                return
 
             # Get RC signal
             channel = vehicle.get_rc_channel()
@@ -144,137 +125,83 @@ class Vehicle:
                 if vehicle.mavlink_connection.flightmode == "RTL" and return_triggered:
                     return_triggered = False
                     vehicle.set_loiter()
-                if self.pause_logs == False:
-                    print("[OK]       RC Connection")
+
             time.sleep(0.5)
-
-    # Threaded: For tracking flight time and RTL after 20 min (with the option to extend)
-    def battery_rtl(self):
-        takeoff_time = datetime.now()  # Initial time
-        time_threshold = 1200  # 20 minutes in seconds
-
-        while True:
-            curr_time = datetime.now()  # Set current time
-            time_delta = (curr_time - takeoff_time).total_seconds()
-            if self.pause_logs == False:
-                print("[OK]       Battery           Time since start: ", int(
-                    time_delta // 60), "min", round(time_delta % 60), "s")
-
-            # If flying for longer than the threshold then RTL
-            if (curr_time - takeoff_time).total_seconds() > time_threshold:
-                print("[CRITICAL] Battery           20 minute timer reached!")
-                self.pause_logs = True  # Pause other logs to read terminal input
-                print(
-                    "-------------------------------------------------------------------------------")
-                # Timed input entry https://pypi.org/project/pytimedinput/
-                choice, timedOut = timedInput(
-                    "[CRITICAL] Battery          Do you want to extend the flight by 2 min (y/n)? ", 60, False, 3)
-                if timedOut == False and (choice.lower() == "y" or choice.lower() == "yes"):
-                    time_threshold += 120
-                    print(
-                        "--------------------------------- STORED LOGS ---------------------------------")
-                    for log in self.store_important_logs:
-                        print(log)
-                    self.store_important_logs.clear()
-                    print(
-                        "-------------------------------------------------------------------------------")
-                    self.pause_logs = False
-                else:
-                    self.returning_home = True
-                    while self.winch_status == 2 or self.winch_status == 3:
-                        pass
-                    vehicle.set_rtl()
-                    print(
-                        "-------------------------------------------------------------------------------")
-                    print("[CRITICAL] Battery           Returning to land")
-                    print(
-                        "--------------------------------- STORED LOGS ---------------------------------")
-                    for log in self.store_important_logs:
-                        print(log)
-                    self.store_important_logs.clear()
-                    print(
-                        "-------------------------------------------------------------------------------")
-                    self.pause_logs = False
-                    return
-            time.sleep(1)
 
     # Threaded: Gets the target winch drop-off and initiates drop automatically when the drone reaches that position
     def winch_automation(self):
-        arduino = None
+        if(self.winch_enabled):
+            arduino = None
 
-        while arduino == None:
-            try:
-                arduino = ArduinoConnector(self)
-                print("[ALERT]    Rover & Winch     Arduino initialized")
-                self.winch_status = 1
-            except Exception as ex:
-                if self.pause_logs == False:
+            while arduino == None:
+                try:
+                    arduino = ArduinoConnector(self)
+                    print("[ALERT]    Rover & Winch     Arduino initialized")
+                    self.winch_status = 1
+                except Exception as ex:
                     print("[ERROR]    Rover & Winch    ", ex)
-                else:
-                    self.store_important_logs.append(
-                        "[ERROR]    Rover & Winch    " + str(ex))
-            time.sleep(1)
+                time.sleep(1)
 
-        # Initialize target location
-        target = Location(0, 0, 0)
+            # Initialize target location
+            target = Location(0, 0, 0)
 
-        # Repeatedly look for target location in ACOM's waypoints, continue once found
-        while target.lat == 0 and target.lng == 0 and target.alt == 0:
-            target = Location(
-                self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
-            if self.pause_logs == False:
+            # Repeatedly look for target location in ACOM's waypoints, continue once found
+            while target.lat == 0 and target.lng == 0 and target.alt == 0:
+                target = Location(
+                    self.waypoints.airdrop["lat"], self.waypoints.airdrop["lng"], self.waypoints.airdrop["alt"])
                 print("[ALERT]    Rover & Winch     Waiting for target position")
-            time.sleep(1)
-        print("[ALERT]    Rover & Winch     Target position found!")
+                time.sleep(1)
+            print("[ALERT]    Rover & Winch     Target position found!")
 
-        # Radius acceptable from target location, change in config.json file
-        allowed_radius = config["allowedRadius"]
+            # Radius acceptable from target location, change in config.json file
+            allowed_radius = config["allowedRadius"]
 
-        while True:
-            # See details in returning_home declaration above
-            # Only exit if the drop has not yet started
-            if self.returning_home and (self.winch_status == 1 or self.winch_status == 4):
-                return
-            # If emergency reel status initiated then send command and change status
-            if self.winch_status == 5:
-                arduino.sendCommandMessage("AIRDROPCANCEL1")
-                self.winch_status = 1
-            # Get drone location
-            try:
-                location = vehicle.get_location()
-            except:
-                print("[ERROR]    Rover & Winch     Failed to get location")
-            try:
-                # Compare current location to fetched drop location
-                curr_loc = Location(
-                    location["lat"], location["lng"], location["alt"])
-                dist = get_distance_metres(target, curr_loc)
-                if self.pause_logs == False:
+            while True:
+                # See details in returning_home declaration above
+                # Only exit if the drop has not yet started
+                if (self.winch_status == 1 or self.winch_status == 4):
+                    return
+                # If emergency reel status initiated then send command and change status
+                if self.winch_status == 5:
+                    arduino.sendCommandMessage("AIRDROPCANCEL1")
+                    self.winch_status = 1
+                # Get drone location
+                try:
+                    location = vehicle.get_location()
+                except:
+                    print("[ERROR]    Rover & Winch     Failed to get location")
+                try:
+                    # Compare current location to fetched drop location
+                    curr_loc = Location(
+                        location["lat"], location["lng"], location["alt"])
+                    dist = get_distance_metres(target, curr_loc)
                     print("[OK]       Rover & Winch     Distance from target: ", round(
                         dist, 2), "m")
-                # Initiate commands if within the target drop location radius
-                if dist < allowed_radius:
-                    # Loiter the drone
-                    vehicle.set_loiter()
-                    print(
-                        "[ALERT]    Rover & Winch     In target distance; Loitering")
+                    # Initiate commands if within the target drop location radius
+                    if dist < allowed_radius:
+                        # Loiter the drone
+                        vehicle.set_loiter()
+                        print(
+                            "[ALERT]    Rover & Winch     In target distance; Loitering")
 
-                    # Send “AIRDROPBEGIN1” to the winch
-                    self.winch_status == 1
-                    arduino.sendCommandMessage("AIRDROPBEGIN1")
-                    print("[START]    Rover & Winch     Starting deployment")
+                        # Send “AIRDROPBEGIN1” to the winch
+                        self.winch_status == 1
+                        arduino.sendCommandMessage("AIRDROPBEGIN1")
+                        print("[START]    Rover & Winch     Starting deployment")
 
-                    # Wait for winch to return “AIRDROPCOMPLETE”
-                    arduino.listenSuccessMessage()
-                    print("[FINISH]   Rover & Winch     Task completed")
+                        # Wait for winch to return “AIRDROPCOMPLETE”
+                        arduino.listenSuccessMessage()
+                        print("[FINISH]   Rover & Winch     Task completed")
 
-                    # Return to the mission in auto mode
-                    vehicle.set_auto()
-                    self.winch_status == 4
-                    return
-            except Exception as e:
-                print("[ERROR]    Rover & Winch     Function failure: ", e)
-            time.sleep(0.1)
+                        # Return to the mission in auto mode
+                        vehicle.set_auto()
+                        self.winch_status == 4
+                        return
+                except Exception as e:
+                    print("[ERROR]    Rover & Winch     Function failure: ", e)
+                time.sleep(0.1)
+        else:
+            print("[ALERT]   Rover & Winch   Winch disabled")
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
