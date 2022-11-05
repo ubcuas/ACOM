@@ -24,6 +24,7 @@ COPY pytest.ini ./
 COPY conftest.py ./
 COPY tests ./tests/
 COPY src/ ./src/
+COPY config.json ./src/
 
 STOPSIGNAL SIGINT
 CMD ["flask", "run"]
