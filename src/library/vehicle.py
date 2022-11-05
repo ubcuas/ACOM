@@ -1,26 +1,23 @@
-from flask import current_app, abort
-from datetime import datetime
-import time
 import json
-from pymavlink import mavutil
-import math
 import threading
+import time
 
-from src.library.util import get_distance_metres, get_point_further_away, get_degrees_needed_to_turn, empty_socket
-import src.library.telemetry
-from src.library.location import Location
-from src.library.waypoints import Waypoints
-from src.library.arduinoconnector import ArduinoConnector
-
-from pytimedinput import timedInput
 import requests
+from flask import current_app
+from pymavlink import mavutil
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-with open('config.json', 'r') as f:
+import src.library.telemetry
+from src.library.arduinoconnector import ArduinoConnector
+from src.library.location import Location
+from src.library.util import get_distance_metres, get_point_further_away, get_degrees_needed_to_turn
+from src.library.waypoints import Waypoints
+
+with open('src/config.json', 'r') as f:
     config = json.load(f)
 
-GCOM_TELEMETRY_ENDPOINT = config["GCOMEndpoint"]
+GCOM_TELEMETRY_ENDPOINT = config["setup"]["GCOMEndpoint"]
 
 """
 Winch status
@@ -35,12 +32,13 @@ Winch status
 
 class Vehicle:
     def __init__(self):
+        self.waypoints = None
         self.reroute_thread = None
         self.mavlink_connection = None
         self.telemetry = None
         self.waypoint_loader = None
         self.connecting = False
-        self.winch_enabled = config["winchEnable"]
+        self.winch_enabled = config["winch"]["winchEnable"]
 
         # Rover status to make sure drop is completed before rtl
         self.winch_status = 0
@@ -83,57 +81,12 @@ class Vehicle:
 
             time.sleep(0.1)
 
-    # Threaded: For tracking RC connection and RTL when disconnected for 30s
-    def rc_disconnect_monitor(self):
-        disconnect_timer = False
-        rc_threshold = 988
-        rtl_time_limit = 30  # 30s buffer from rc disconnect
-        kill_time_limit = 180  # 180s buffer (3 min)
-
-        while True:
-
-            # Get RC signal
-            channel = vehicle.get_rc_channel()
-            # Initiate an initial value if less than threshold
-            if channel <= rc_threshold and disconnect_timer == False:
-                disconnect_timer = True
-                orig_time = datetime.now()
-                print("[ALERT]    RC Connection     Lost!")
-            # Compare initial time to current if still disconnected
-            elif channel <= rc_threshold and disconnect_timer:
-                curr_time = datetime.now()
-                print("[ALERT]    RC Connection     Disconnected:", round(
-                    (curr_time - orig_time).total_seconds(), 1), "s")
-                # Drop out of the sky if RC disconnect for more than 180s (3 min)
-                if (curr_time - orig_time).total_seconds() > kill_time_limit:
-                    vehicle.terminate()
-                    print("[ALERT]    RC Connection     FLIGHT TERMINATED!")
-                # RTL if RC disconnect for more than 30s
-                elif (curr_time - orig_time).total_seconds() > rtl_time_limit and return_triggered == False:
-                    # Don't RTL while winch is in progress
-                    if self.winch_status == 2 or self.winch_status == 3 or self.winch_status == 5:
-                        # Indicate to Arduino function that we need to emergency reel
-                        self.winch_status = 5
-                    vehicle.set_rtl()
-                    print(
-                        "[EXPIRED]  RC Connection     Aircraft returning home to land!")
-                    return_triggered = True
-            else:
-                # Reset timer if above threshold
-                disconnect_timer = False
-                # If in RTL mode from RC disconnect set to loiter
-                if vehicle.mavlink_connection.flightmode == "RTL" and return_triggered:
-                    return_triggered = False
-                    vehicle.set_loiter()
-
-            time.sleep(0.5)
-
     # Threaded: Gets the target winch drop-off and initiates drop automatically when the drone reaches that position
     def winch_automation(self):
-        if(self.winch_enabled):
+        if self.winch_enabled:
             arduino = None
 
-            while arduino == None:
+            while arduino is None:
                 try:
                     arduino = ArduinoConnector(self)
                     print("[ALERT]    Rover & Winch     Arduino initialized")
@@ -154,12 +107,12 @@ class Vehicle:
             print("[ALERT]    Rover & Winch     Target position found!")
 
             # Radius acceptable from target location, change in config.json file
-            allowed_radius = config["allowedRadius"]
+            allowed_radius = config["winch"]["allowedRadius"]
 
             while True:
                 # See details in returning_home declaration above
                 # Only exit if the drop has not yet started
-                if (self.winch_status == 1 or self.winch_status == 4):
+                if self.winch_status == 1 or self.winch_status == 4:
                     return
                 # If emergency reel status initiated then send command and change status
                 if self.winch_status == 5:
@@ -185,7 +138,7 @@ class Vehicle:
                             "[ALERT]    Rover & Winch     In target distance; Loitering")
 
                         # Send “AIRDROPBEGIN1” to the winch
-                        self.winch_status == 1
+                        self.winch_status = 1
                         arduino.sendCommandMessage("AIRDROPBEGIN1")
                         print("[START]    Rover & Winch     Starting deployment")
 
@@ -195,16 +148,17 @@ class Vehicle:
 
                         # Return to the mission in auto mode
                         vehicle.set_auto()
-                        self.winch_status == 4
+                        self.winch_status = 4
                         return
                 except Exception as e:
                     print("[ERROR]    Rover & Winch     Function failure: ", e)
                 time.sleep(0.1)
         else:
-            print("[ALERT]   Rover & Winch   Winch disabled")
+            print("[ALERT]    Rover & Winch     Winch disabled")
+            return
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
-        if self.mavlink_connection == None or self.mavlink_connection.target_system < 1 and not self.connecting:
+        if self.mavlink_connection is None or self.mavlink_connection.target_system < 1 and not self.connecting:
             self.connecting = True
             current_app.logger.info(
                 "Mavlink connection is now being initialized")
@@ -232,12 +186,6 @@ class Vehicle:
                 post_to_gcom_thread = threading.Thread(
                     target=self.post_to_gcom, daemon=True)
                 post_to_gcom_thread.start()
-                rc_disconnect_monitor_thread = threading.Thread(
-                    target=self.rc_disconnect_monitor, daemon=True)
-                rc_disconnect_monitor_thread.start()
-                battery_rtl_thread = threading.Thread(
-                    target=self.battery_rtl, daemon=True)
-                battery_rtl_thread.start()
                 winch_automation_thread = threading.Thread(
                     target=self.winch_automation, daemon=True)
                 winch_automation_thread.start()
@@ -294,7 +242,7 @@ class Vehicle:
         self.reroute_thread.start()
 
     def stop_reroute(self):
-        self.reroute_thread
+        self.reroute_thread.kill()
 
     def get_location(self):
         self.telemetry.wait('GPS_RAW_INT')
