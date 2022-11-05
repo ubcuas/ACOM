@@ -3,11 +3,12 @@ import sys
 import glob
 import time
 
-class ArduinoConnector():
+
+class ArduinoConnector:
     def __init__(self, vehicle, serialPort=""):
         self.arduino = None
         self.vehicle = vehicle
-        self.findPayload(serialPort) # We need to establish a serial connection with the Arduino
+        self.findPayload(serialPort)  # We need to establish a serial connection with the Arduino
 
         if self.arduino is None:
             print("[ERROR]    Rover & Winch     Couldn't find payload")
@@ -15,7 +16,7 @@ class ArduinoConnector():
 
     def findPayload(self, serialPort):
         ports = []
-        if serialPort == "": # If no port is forced, get all the ports
+        if serialPort == "":  # If no port is forced, get all the ports
             ports = self.getSerialPorts()
         else:
             ports.append(serialPort)
@@ -24,11 +25,11 @@ class ArduinoConnector():
         for portName in ports:
             print("[ALERT]    Rover & Winch     Trying port", portName)
             arduino = serial.Serial(port=portName, baudrate=9600, timeout=1.5, write_timeout=1.5)
-            time.sleep(2) # Giving time to Arduino to wake up
+            time.sleep(2)  # Giving time to Arduino to wake up
 
             try:
-                arduino.write(bytes('uas1', 'utf-8')) # Sending 'uas1' and expecting to get 'uas' back
-            except serial.SerialTimeoutException: # If we get an exception, the port is not open
+                arduino.write(bytes('uas1', 'utf-8'))  # Sending 'uas1' and expecting to get 'uas' back
+            except serial.SerialTimeoutException:  # If we get an exception, the port is not open
                 continue
 
             data = arduino.readline()

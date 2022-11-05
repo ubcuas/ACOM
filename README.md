@@ -3,9 +3,7 @@
 # UBC UAS ACOM
 
 ## About
-Air Communcation (ACOM) is the aircrafts’ on-board software that will be accepting commands during mission flight and change waypoint pathing ‘on-the-fly’ for the intent of dynamic obstacle avoidance.
-
-See the full documentation on UAS confluence [here](http://confluence.ubcuas.com/display/GCOM/ACOM+Documentation) (Note: You have to be using ubcsecure or the UBC VPN in order to access.)
+Air Communication (ACOM) is the aircraft's on-board software that will be accepting commands during mission flight and change waypoint pathing ‘on-the-fly’ for the intent of dynamic obstacle avoidance.
 
 ## Setup
 ### Building using docker:
@@ -15,45 +13,67 @@ See the full documentation on UAS confluence [here](http://confluence.ubcuas.com
 
 For x86:
 ```shell
-    $ make run
+make run
 ```
 
 For ARM:
 ```shell
-    $ make run-arm
+$ make run-arm
 ```
+
+See the [`Makefile`](Makefile) for other run options
+
 ## Running with serial devices connected via USB
-If you want to run ACOM with a serial device instead of SITL, you must change the `config.py`, and give Docker permission to access your serial device.
+If you want to run ACOM with a serial device instead of SITL, you must change the devices passed to docker in the [`Makefile`](Makefile), which gives Docker permission to access your serial device. Some of these have already been set up (such as the winch) and can simply be enabled in [`config.py`](config.json) and run with the associated [`Makefile`](Makefile) command. See [`Giving Docker containers access to serial devices`](README.md#giving-docker-containers-access-to-serial-devices) for more details
+
+### Running Mode
+You can choose between running in `"development"` and `"production"`. This is specified in [`config.py`](config.json) under `"runMode"` and changes which Flask config file is used (from [`instance`](/instance))
 
 ### Changing the configuration
-Comment out the `IP_ADDRESS` and `PORT` constants.
+See [`config.py`](config.json) to configure options. For IP address connection to SITL (usually testing), set `connectionMode` to `"ip"`. For a serial connection (real flight), set `connectionMode` to `"serial"`. For each, change their section values to match the desired settings.
 
-After that, uncomment `SERIAL_PORT` and `BAUD_RATE`.
-
-Then, change their values to match your serial device.
-
-Example `config.py` with a serial device on COM8 with a baudrate of 115200
-```py
-...
-
-# set optional default ip address & port
-# IP_ADDRESS = "acom-sitl"
-# PORT = 5760
-
-# set optional default serial port & baud rate
-SERIAL_PORT = "COM8"
-BAUD_RATE = 115200
+Example with a serial device on COM8 with a baudrate of 115200
+```json
+{
+    "setup": {
+        ...
+        "connectionMode": "serial",
+        ...
+    },
+    ...
+    },
+    "ip": {
+        "ipAddress": "acom-sitl",
+        "port": 5760
+    },
+    "serial": {
+        "serialPort": "/dev/ttyACM0",
+        "baudRate": 115200
+    }
+}
 ```
 
 ### Changing GCOM-X Endpoint
-Depending on whether you are running ACOM locally or on an Odroid you will need to use different telemetry endpoints. In `config.json` you will see the following configurable variable. Make sure to select the endpoint you need by replacing the respective endpoint with the one listed below. (local is set by default).
-```py
+Depending on whether you are running ACOM locally or on an Odroid you will need to use different telemetry endpoints. In [`config.json`](config.json) you will see the following configurable variable. Make sure to select the endpoint you need by replacing the respective endpoint with the one listed below (testing is set by default).
+```
+Testing environment
+"GCOMEndpoint": "http://host.docker.internal:8080/api/interop/telemetry"
 
-# Testing environment
-GCOM_TELEMETRY_ENDPOINT = "http://host.docker.internal:8080/api/interop/telemetry"
+Production environment
+"GCOMEndpoint": "http://51.222.12.76:61633/api/interop/telemetry"
+```
 
-# Production environment
-GCOM_TELEMETRY_ENDPOINT = "http://51.222.12.76:61633/api/interop/telemetry"
+### Enabling Winch
+The winch can be enabled and disabled in [`config.json`](config.json) by modifying the variable "winchEnable". `"winchEnable": true` will allow winch to be used, `false` will ignore winch code block (the default value is set to false). Do not use enable the winch is not attached.
+
+The winch statuses are as follows:
+```
+0 - Disconnected
+1 - Standby
+2 - In Progress
+3 - Error
+4 - Complete
+5 - Emergency Reel
 ```
 
 ### Giving Docker containers access to serial devices
@@ -75,12 +95,12 @@ NOTE: There is no simple way to access serial devices via Docker Desktop on Mac.
 ## Testing
 - Run tests for the whole ACOM flask server:
 ```shell
-	$ make ci-test
+$ make ci-test
 ```
 
 **Server URL**
 
-- http://172.21.0.3:5000/
+- [127.0.0.1:5000](http://127.0.0.1:5000) (or localhost)
 
 but it ultimately depends on what the Flask development URL binds itself to, look in the terminal after running
 ```

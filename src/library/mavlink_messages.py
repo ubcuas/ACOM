@@ -1,5 +1,6 @@
 import xmltodict
-import os 
+import os
+
 
 # A class that parses the Mavlink messages definitions
 # Source: https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/common.xml

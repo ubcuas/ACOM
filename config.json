@@ -1,5 +1,20 @@
 {
+    "setup": {
+        "runMode": "development",
+        "connectionMode": "ip",
+        "GCOMEndpoint": "http://host.docker.internal:8080/api/interop/telemetry"
+    },
     "latitudeOffset": 43.2816,
-    "GCOMEndpoint": "http://host.docker.internal:8080/api/interop/telemetry",
-    "allowedRadius": 1
+    "winch": {
+        "winchEnable": false,
+        "allowedRadius": 1
+    },
+    "ip": {
+        "ipAddress": "acom-sitl",
+        "port": 5760
+    },
+    "serial": {
+        "serialPort": "/dev/ttyACM0",
+        "baudRate": 115200
+    }
 }
