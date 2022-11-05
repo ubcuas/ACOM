@@ -3,7 +3,7 @@
 class Location(object):
     """
     A location object.
-    The latitude and longitude are relative to the `WGS84 coordinate system <http://en.wikipedia.org/wiki/World_Geodetic_System>`_.
+    The latitude and longitude are relative to the `WGS84 coordinate system <https://en.wikipedia.org/wiki/World_Geodetic_System>`_.
     The altitude is relative to mean sea-level (MSL).
     For example, a global location object with altitude 30 metres above sea level might be defined as:
     .. code:: python

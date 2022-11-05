@@ -1,8 +1,10 @@
 # utility.py
-from math import radians, cos, sin, asin, sqrt, pi, atan2, degrees
-from src.library.location import Location
+from math import radians, cos, sin, asin, sqrt, atan2, degrees
+
 from geographiclib.geodesic import Geodesic
-from functools import wraps
+
+from src.library.location import Location
+
 
 ## returns request.json['key'] if the key exists
 ## else return given defaultValue
@@ -12,6 +14,7 @@ def parseRequest(request, key, defaultValue):
     else:
         return defaultValue
 
+
 ## returns object['key'] if the key exists
 ## else return given defaultValue
 def parseJson(jsonObject, key, defaultValue):
@@ -19,6 +22,7 @@ def parseJson(jsonObject, key, defaultValue):
         return jsonObject[key]
     else:
         return defaultValue
+
 
 def empty_socket(mavlink_connection):
     """
@@ -33,6 +37,7 @@ def empty_socket(mavlink_connection):
             mavlink_connection.port.recv(n)
         except:
             break
+
 
 # returns the distance in metres between two points using haversine formula
 def get_distance_metres(point1, point2):
@@ -50,10 +55,11 @@ def get_distance_metres(point1, point2):
     # haversine formula
     dlon = lon2 - lon1
     dlat = lat2 - lat1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     c = 2 * asin(sqrt(a))
     r = 6371 * 1000
     return c * r
+
 
 def get_bearing(point1, point2):
     lon1 = point1.lng
@@ -63,6 +69,7 @@ def get_bearing(point1, point2):
 
     brng = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2)['azi1']
     return radians(brng)
+
 
 def get_degrees_needed_to_turn(heading, currentLocation, targetLocation):
     lon1 = currentLocation.lng
@@ -76,6 +83,7 @@ def get_degrees_needed_to_turn(heading, currentLocation, targetLocation):
         turn_degree = 360 - turn_degree
     return turn_degree
 
+
 def get_point_further_away(point1, point2, d):
     lon1 = point1.lng
     lat1 = point1.lat
@@ -85,17 +93,17 @@ def get_point_further_away(point1, point2, d):
     alt2 = point2.alt
 
     brng = get_bearing(point1, point2)
-    #print(degrees(brng))
+    # print(degrees(brng))
 
     lon2 = radians(lon2)
     lat2 = radians(lat2)
-    R = 6378.1 * 1000 #Radius of the Earth in m
+    R = 6378.1 * 1000  # Radius of the Earth in m
 
-    lat = asin( sin(lat2)*cos(d/R) +
-        cos(lat2)*sin(d/R)*cos(brng))
+    lat = asin(sin(lat2) * cos(d / R) +
+               cos(lat2) * sin(d / R) * cos(brng))
 
-    lon = lon2 + atan2(sin(brng)*sin(d/R)*cos(lat2),
-                cos(d/R)-sin(lat2)*sin(lat))
+    lon = lon2 + atan2(sin(brng) * sin(d / R) * cos(lat2),
+                       cos(d / R) - sin(lat2) * sin(lat))
 
     lat = degrees(lat)
     lon = degrees(lon)

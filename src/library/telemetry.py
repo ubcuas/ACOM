@@ -1,15 +1,13 @@
+import json
+import socket
+import time
+from threading import Thread
+
 from observable import Observable
 from pymavlink import mavutil
-from threading import Thread
-import time
-import socket
 
-import json
-
-with open('config.json', 'r') as f:
+with open('src/config.json', 'r') as f:
     config = json.load(f)
-
-from src.library.util import empty_socket
 
 
 class Telemetry:
@@ -41,8 +39,12 @@ class Telemetry:
         self.base_mode = None
         self.armed = False
 
-        self.is_polling = False
+        self.thread = None
+        self.notifiers = None
+        self.event = None
+        self.heartbeat_lastsent = None
 
+        self.is_polling = False
         self.start_polling()  # this is to log & poll for all data coming from autopilot
 
     def get_location(self):
@@ -108,8 +110,8 @@ class Telemetry:
                 nonlocal result
                 # ignore groundstations for heartbeat
                 if (
-                    msg.get_type() == "HEARTBEAT"
-                    and msg.type == mavutil.mavlink.MAV_TYPE_GCS
+                        msg.get_type() == "HEARTBEAT"
+                        and msg.type == mavutil.mavlink.MAV_TYPE_GCS
                 ):
                     self.notifiers.once(msg_type, callback)
                     return
@@ -157,8 +159,8 @@ class Telemetry:
             self.mav_type = msg.type
             self.base_mode = msg.base_mode
             self.armed = (
-                msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
-            ) != 0
+                                 msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
+                         ) != 0
 
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
