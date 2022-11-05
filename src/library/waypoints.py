@@ -52,8 +52,8 @@ class Waypoints:
             if next_wp is not None:
                 # home position wp
                 if (
-                    next_wp.command == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
-                    and next_wp.seq == 0
+                        next_wp.command == mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
+                        and next_wp.seq == 0
                 ):
                     homePos = {"lat": next_wp.x,
                                "lng": next_wp.y, "alt": next_wp.z}
@@ -136,7 +136,7 @@ class Waypoints:
             seqNum += 1
 
         # is rtl enabled
-        if rtl == True:
+        if rtl:
             self.waypoint_loader.add(
                 self.generate_mission_item(
                     seqNum,
