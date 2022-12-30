@@ -64,7 +64,7 @@ Production environment
 ```
 
 ### Enabling Winch
-The winch can be enabled and disabled in [`config.json`](config.json) by modifying the variable "winchEnable". `"winchEnable": true` will allow winch to be used, `false` will ignore winch code block (the default value is set to false). Do not use enable the winch is not attached.
+The winch can be enabled and disabled in [`config.json`](config.json) by modifying the variable "winchEnable". `"winchEnable": true` will allow winch to be used, `false` will ignore winch code block (the default value is set to false). Do not use enable when the winch is not attached.
 
 The winch statuses are as follows:
 ```
