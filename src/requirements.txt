@@ -1,7 +1,7 @@
 Flask==2.0.2
 lxml==4.4.1
 future==0.17.1
-pymavlink==2.3.8
+pymavlink==2.4.37
 xmltodict==0.12.0
 python-dotenv==0.10.3
 pytest==5.2.2
