@@ -7,8 +7,6 @@ updates:
     directory: "/src"
     schedule:
       interval: "weekly"
-    assignees:
-      - "ubc-uas"
     insecure-external-code-execution: deny
     labels:
       - "Priority: Medium"
