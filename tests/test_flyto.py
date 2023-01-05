@@ -1,12 +1,13 @@
 import pytest
 import json
 from unittest.mock import patch
+from src.library.vehicle import Vehicle
 
 flyto_endpoint = "/aircraft/flyto"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     response = app.post(flyto_endpoint)
@@ -16,7 +17,7 @@ def test_premature_action(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_flyto_calls_vehicle_flyto_with_correct_parameters(vehicle, app):
+def test_flyto_calls_vehicle_flyto_with_correct_parameters(vehicle: Vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,

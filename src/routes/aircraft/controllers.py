@@ -192,8 +192,8 @@ def aircraft_home_position():
     vehicle.mavlink_connection.mav.command_long_send(
         vehicle.mavlink_connection.target_system,
         vehicle.mavlink_connection.target_component,
-        mavutil.mavlink.MAV_CMD_GET_HOME_POSITION,
-        0,
+        mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,
+        242,
         0,
         0,
         0,
@@ -204,7 +204,20 @@ def aircraft_home_position():
     )
     msg = vehicle.telemetry.wait("HOME_POSITION")
 
-    return jsonify(msg), 200
+    return jsonify(
+        {
+            "lat": msg.latitude * 1.0e-7,
+            "lng": msg.longitude * 1.0e-7,
+            "alt": msg.altitude / 1000,
+            "x": msg.x,
+            "y": msg.y,
+            "z": msg.z,
+            "q": msg.q,
+            "approach_x": msg.approach_x,
+            "approach_y": msg.approach_y,
+            "approach_z": msg.approach_z,
+        }
+    ), 200
 
 
 # upload mission waypoints
@@ -259,14 +272,16 @@ def setup_mavlink_connection(ip_address, port):
         except Exception:
             abort(400, "Mavlink is not connected")
 
+
 @aircraft.route("/winchstatus", methods=["GET"])
 @connection_required
 def get_winch_status():
     data = vehicle.winch_status
     return jsonify({"winch_status": data}), 200
 
+
 @aircraft.route("/winch/command", methods=["POST"])
 @connection_required
 def send_winch_command():
     vehicle.winch_status = 5
-    return jsonify({"command":5}), 200
+    return jsonify({"command": 5}), 200

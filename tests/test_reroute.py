@@ -1,12 +1,13 @@
 import pytest
 import json
 from unittest.mock import patch
+from src.library.vehicle import Vehicle
 
 reroute_endpoint = "/aircraft/reroute"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     response = app.post(reroute_endpoint)
@@ -16,7 +17,7 @@ def test_premature_action(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_reroute_endpoint_calls_vehicle_reroute_with_waypoints(vehicle, app):
+def test_reroute_endpoint_calls_vehicle_reroute_with_waypoints(vehicle: Vehicle, app):
     gps_response = {
         "alt": 111.0,
         "heading": 131,

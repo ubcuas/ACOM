@@ -14,7 +14,7 @@ from src.library.location import Location
 from src.library.util import get_distance_metres, get_point_further_away, get_degrees_needed_to_turn
 from src.library.waypoints import Waypoints
 
-with open('src/config.json', 'r') as f:
+with open('config.json', 'r') as f:
     config = json.load(f)
 
 GCOM_TELEMETRY_ENDPOINT = config["setup"]["GCOMEndpoint"]

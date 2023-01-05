@@ -2,12 +2,13 @@ import pytest
 import json
 import time
 from unittest.mock import patch, MagicMock
+from src.library.vehicle import Vehicle
 
 disarm_endpoint = "/aircraft/disarm"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     response = app.put(disarm_endpoint)
@@ -17,7 +18,7 @@ def test_premature_action(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_disarm_endpoint_calls_vehicle_disarm(vehicle, app):
+def test_disarm_endpoint_calls_vehicle_disarm(vehicle: Vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,

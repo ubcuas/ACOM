@@ -8,7 +8,6 @@ def get_connected_app():
     return create_app(
         {
             "APIKEY": "jif3fioj32ifj3oi2jf2",
-            "FLASK_ENV": "production",
             "MAVLINK_SETUP_DEBUG": "production",
             "IP_ADDRESS": "164.2.0.3",
             "PORT": 5760,

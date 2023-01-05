@@ -1,14 +1,14 @@
 import pytest
 import json
 from unittest.mock import patch
-from src.library.vehicle import vehicle
+from src.library.vehicle import vehicle, Vehicle
 
 connect_endpoint = "/aircraft/connect"
 mission_endpoint = "/aircraft/mission"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def testPrematureAction(vehicle, app):
+def testPrematureAction(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     global mission_endpoint

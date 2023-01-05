@@ -1,6 +1,6 @@
 # UBC UAS Dockerfile - ACOM
 
-FROM python:3.8
+FROM python:3.11
 
 # Create the working directory
 RUN mkdir -p /uas/acom
@@ -16,7 +16,7 @@ RUN pip install -r src/requirements.txt
 # Flask environment variables
 ENV FLASK_APP src
 ENV FLASK_RUN_HOST 0.0.0.0
-ENV FLASK_ENV development
+ENV FLASK_DEBUG 1
 
 # Copy in the entire context
 COPY instance ./instance/
@@ -24,7 +24,7 @@ COPY pytest.ini ./
 COPY conftest.py ./
 COPY tests ./tests/
 COPY src/ ./src/
-COPY config.json ./src/
+COPY config.json ./
 
 STOPSIGNAL SIGINT
 CMD ["flask", "run"]

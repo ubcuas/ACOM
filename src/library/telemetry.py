@@ -6,7 +6,7 @@ from threading import Thread
 from observable import Observable
 from pymavlink import mavutil
 
-with open('src/config.json', 'r') as f:
+with open('config.json', 'r') as f:
     config = json.load(f)
 
 
@@ -159,13 +159,13 @@ class Telemetry:
             self.mav_type = msg.type
             self.base_mode = msg.base_mode
             self.armed = (
-                                 msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
-                         ) != 0
+                msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
+            ) != 0
 
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
             # Use relative alt + MSL at base alt
-            self.alt = msg.relative_alt / config["latitudeOffset"]
+            self.alt = msg.relative_alt / 1000 + config["latitudeOffset"]
             self.heading = msg.hdg / 100
 
         @self.event.on("VFR_HUD")

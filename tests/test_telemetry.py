@@ -1,6 +1,7 @@
 import pytest
 import json
 from unittest.mock import patch
+from src.library.vehicle import Vehicle
 
 flightmode_endpoint = "/aircraft/telemetry/flightmode"
 gps_endpoint = "/aircraft/telemetry/gps"
@@ -11,7 +12,7 @@ telemetry_endpoints = [flightmode_endpoint, gps_endpoint, heartbeat_endpoint]
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     for telemetry_endpoint in telemetry_endpoints:
@@ -22,7 +23,7 @@ def test_premature_action(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_flightmode_returns_flightmode(vehicle, app):
+def test_flightmode_returns_flightmode(vehicle: Vehicle, app):
     vehicle.mavlink_connection.flightmode = "GUIDED"
 
     response = app.get(flightmode_endpoint)
@@ -32,7 +33,7 @@ def test_flightmode_returns_flightmode(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_gps_calls_vehicle_get_location(vehicle, app):
+def test_gps_calls_vehicle_get_location(vehicle: Vehicle, app):
     test_location = {
         "lat": 1,
         "lng": 2,
@@ -49,7 +50,7 @@ def test_gps_calls_vehicle_get_location(vehicle, app):
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_heartbeat_calls_vehicle_telemetry_heartbeat(vehicle, app):
+def test_heartbeat_calls_vehicle_telemetry_heartbeat(vehicle: Vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,

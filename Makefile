@@ -43,11 +43,6 @@ run-arm: run-sitl-arm run-acom-arm
 stop: stop-sitl
 
 ## Docker ##
-docker-multiarch-deps:
-	DOCKER_CLI_EXPERIMENTAL=enabled DOCKER_BUILDKIT=enabled docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-	DOCKER_CLI_EXPERIMENTAL=enabled DOCKER_BUILDKIT=enabled docker buildx create --name mubuilder | echo "ok"
-	DOCKER_CLI_EXPERIMENTAL=enabled DOCKER_BUILDKIT=enabled docker buildx use mubuilder
-	DOCKER_CLI_EXPERIMENTAL=enabled DOCKER_BUILDKIT=enabled docker buildx inspect --bootstrap
 docker:
 	docker build . --pull=true --tag ubcuas/acom:latest
 
