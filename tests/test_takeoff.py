@@ -2,13 +2,14 @@ import pytest
 import json
 from unittest.mock import patch
 from pymavlink import mavutil
+from src.library.vehicle import Vehicle
 
 
 takeoff_endpoint = "/aircraft/takeoff"
 
 
 @patch("src.routes.aircraft.controllers.vehicle")
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
 
     response = app.post(takeoff_endpoint)

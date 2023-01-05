@@ -1,11 +1,12 @@
 import pytest
 import json
 from unittest.mock import patch
+from src.library.vehicle import Vehicle
 
 rtl_endpoint = '/aircraft/rtl'
 
 @patch('src.routes.aircraft.controllers.vehicle')
-def test_premature_action(vehicle, app):
+def test_premature_action(vehicle: Vehicle, app):
     vehicle.is_connected.return_value = False
     
     response = app.put(rtl_endpoint)
@@ -14,7 +15,7 @@ def test_premature_action(vehicle, app):
     assert response.status_code == 400
 
 @patch('src.routes.aircraft.controllers.vehicle')
-def test_rtl_endpoint_calls_vehicle_rtl(vehicle, app):
+def test_rtl_endpoint_calls_vehicle_rtl(vehicle: Vehicle, app):
     test_heartbeat = {
         "autopilot": 3,
         "base_mode": 217,
