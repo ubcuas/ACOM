@@ -27,11 +27,14 @@ jobs:
     - uses: actions/checkout@v3
     - uses: pguyot/arm-runner-action@v2
       with:
+        image_additional_mb: 2048
         cpu: cortex-a7
         base_image: raspios_lite:latest
         cpu_info: cpuinfo/raspberrypi_3b
         commands: |
-          sudo apt-get -y install make
+          sudo apt-get update && sudo apt-get upgrade
+          sudo apt-get -y install build-essential
+          sudo apt install raspberrypi-kernel raspberrypi-kernel-headers
           curl -fsSL https://get.docker.com -o get-docker.sh
           sudo sh get-docker.sh
           sudo make docker-arm
