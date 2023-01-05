@@ -5,7 +5,7 @@ from src.library.vehicle import vehicle
 import os
 import json
 
-with open('src/config.json', 'r') as f:
+with open('config.json', 'r') as f:
     config = json.load(f)
 
 
@@ -16,7 +16,6 @@ def create_app(test_config=None):
     app.config.from_mapping(
         # a default secret that should be overridden by instance config
         APIKEY="123",
-        FLASK_ENV="development",
         MAVLINK_SETUP_DEBUG="production",
         FLASK_DEBUG=1
     )
@@ -42,23 +41,26 @@ def create_app(test_config=None):
     if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         with app.app_context():
             if config["setup"]["connectionMode"] == "ip" and config["ip"]["ipAddress"] and config["ip"]["port"]:
-                app.logger.info("Seting up TCP mavlink connection automatically from config variables")
-                vehicle.setup_mavlink_connection('tcp', config["ip"]["ipAddress"], config["ip"]["port"])
+                app.logger.info(
+                    "Seting up TCP mavlink connection automatically from config variables")
+                vehicle.setup_mavlink_connection(
+                    'tcp', config["ip"]["ipAddress"], config["ip"]["port"])
             elif config["setup"]["connectionMode"] == "serial" and config["serial"]["serialPort"] and config["serial"]["baudRate"]:
-                app.logger.info("Seting up serial mavlink connection automatically from config variables")
-                vehicle.setup_mavlink_connection('serial', config["serial"]["serialPort"], baud=config["serial"]["baudRate"])
+                app.logger.info(
+                    "Seting up serial mavlink connection automatically from config variables")
+                vehicle.setup_mavlink_connection(
+                    'serial', config["serial"]["serialPort"], baud=config["serial"]["baudRate"])
 
     # enforces apikey on eps
     def require_apikey(view_function):
         APIKEY = app.config['APIKEY']
-        FLASK_ENV = app.config['FLASK_ENV']
 
         @wraps(view_function)
         # the new, post-decoration function. Note *args and **kwargs here.
         def decorated_function(*args, **kwargs):
             request.get_data()
             if ((request.values.get('apikey') and request.values.get('apikey') == APIKEY)
-                    or FLASK_ENV == 'development'):
+                    or config["setup"]["runMode"] == "development"):
                 return view_function(*args, **kwargs)
             else:
                 abort(401)
@@ -67,7 +69,7 @@ def create_app(test_config=None):
 
     # Home route
     @app.route('/')
-    # @require_apikey
+    @require_apikey
     def index():
         res = {'msg': 'This is the index route.'}
         return jsonify(res), 200
