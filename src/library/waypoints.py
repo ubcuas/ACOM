@@ -117,7 +117,7 @@ class Waypoints:
 
         # load in wps
         for waypoint in waypoints:
-            if waypoint["wp_type"] == "airdrop":
+            if ("wp_type" in waypoint and waypoint["wp_type"] == "airdrop"):
                 self.airdrop["lat"] = waypoint["lat"]
                 self.airdrop["lng"] = waypoint["lng"]
                 self.airdrop["alt"] = waypoint["alt"]
