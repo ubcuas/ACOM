@@ -30,7 +30,8 @@ jobs:
         base_image: dietpi:rpi_armv7_bullseye
         cpu: cortex-a7
         commands: |
-          sudo apt-get -y install make
+          sudo apt install build-essential
+          sudo apt-get -y install build-essential
           make docker-arm
           make ci-test
     - name: Publish Docker image
