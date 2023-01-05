@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker image
+    - name: Build Docker image
       run: make docker
     - name: Run tests
       run: make ci-test
@@ -25,14 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: make docker-arm
-    - name: Run tests
-      run: make ci-test
+    - uses: pguyot/arm-runner-action@v2
+      with:
+        base_image: dietpi:rpi_armv7_bullseye
+        cpu: cortex-a7
+        commands: |
+          make docker-arm
+          make ci-test
     - name: Publish Docker image
       if: ${{ github.event_name == 'push' }}
       run: |
         docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
         docker-publish-arm
-      
-      
