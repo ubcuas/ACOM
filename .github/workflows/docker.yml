@@ -32,8 +32,10 @@ jobs:
         cpu_info: cpuinfo/raspberrypi_3b
         commands: |
           sudo apt-get -y install make
-          make docker-arm
-          make ci-test
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          sudo sh get-docker.sh
+          sudo make docker-arm
+          sudo make ci-test
     - name: Publish Docker image
       if: ${{ github.event_name == 'push' }}
       run: |
