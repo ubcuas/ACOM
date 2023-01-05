@@ -36,11 +36,7 @@ Example with a serial device on COM8 with a baudrate of 115200
 ```json
 {
     "setup": {
-        ...
         "connectionMode": "serial",
-        ...
-    },
-    ...
     },
     "ip": {
         "ipAddress": "acom-sitl",
