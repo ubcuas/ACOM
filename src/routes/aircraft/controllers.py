@@ -206,9 +206,9 @@ def aircraft_home_position():
 
     return jsonify(
         {
-            "lat": msg.latitude,
-            "lng": msg.longitude,
-            "alt": msg.altitude,
+            "lat": msg.latitude * 1.0e-7,
+            "lng": msg.longitude * 1.0e-7,
+            "alt": msg.altitude / 1000,
             "x": msg.x,
             "y": msg.y,
             "z": msg.z,

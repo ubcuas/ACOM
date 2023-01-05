@@ -165,7 +165,7 @@ class Telemetry:
         @self.event.on("GLOBAL_POSITION_INT")
         def gpi_listener(msg):
             # Use relative alt + MSL at base alt
-            self.alt = msg.relative_alt / config["latitudeOffset"]
+            self.alt = msg.relative_alt / 1000 + config["latitudeOffset"]
             self.heading = msg.hdg / 100
 
         @self.event.on("VFR_HUD")
