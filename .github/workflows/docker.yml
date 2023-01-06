@@ -36,7 +36,6 @@ jobs:
           sudo apt -y install raspberrypi-kernel raspberrypi-kernel-headers
           curl -fsSL https://get.docker.com -o get-docker.sh
           sudo sh get-docker.sh
-          sudo service docker status
           dockerd --debug
           sudo docker run --rm --name acom-production -it -p 0.0.0.0:5000:5000 --network=host --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
           sudo make docker-arm
