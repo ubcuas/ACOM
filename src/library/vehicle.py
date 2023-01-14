@@ -43,8 +43,8 @@ class Vehicle:
         # Rover status to make sure drop is completed before rtl
         self.winch_status = 0
 
+        # locks to prevent race conditions between post_to_gcom thread and winch_automation changing winch_status
         self.lock = threading.Lock()
-        self.event = threading.Event()
 
     # Threaded: Continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
@@ -58,26 +58,15 @@ class Vehicle:
                 http.mount('http://', adapter)
 
                 self.lock.acquire()
-                if self.event.is_set():
-                    json_data = json.dumps({
-                        "latitude_dege7":  location["lat"]*10**7,
-                        "longitude_dege7": location["lng"]*10**7,
-                        "altitude_msl_m":  location["alt"],
-                        "heading_deg":     vehicle.get_heading(),
-                        "groundspeed_m_s": vehicle.get_speed(),
-                        "chan3_raw":       vehicle.get_rc_channel(),
-                        "winch_status":    1
-                    })
-                else:
-                    json_data = json.dumps({
-                        "latitude_dege7":  location["lat"]*10**7,
-                        "longitude_dege7": location["lng"]*10**7,
-                        "altitude_msl_m":  location["alt"],
-                        "heading_deg":     vehicle.get_heading(),
-                        "groundspeed_m_s": vehicle.get_speed(),
-                        "chan3_raw":       vehicle.get_rc_channel(),
-                        "winch_status":    self.winch_status
-                    })
+                json_data = json.dumps({
+                    "latitude_dege7":  location["lat"]*10**7,
+                    "longitude_dege7": location["lng"]*10**7,
+                    "altitude_msl_m":  location["alt"],
+                    "heading_deg":     vehicle.get_heading(),
+                    "groundspeed_m_s": vehicle.get_speed(),
+                    "chan3_raw":       vehicle.get_rc_channel(),
+                    "winch_status":    self.winch_status
+                })
 
                 gcom_telemetry_post = http.post(
                     GCOM_TELEMETRY_ENDPOINT,
@@ -106,36 +95,18 @@ class Vehicle:
     def winch_automation(self):
         if self.winch_enabled:
             arduino = None
-
-            #sets event to post winch_status as a constant rather than as a reference to winch_status
-            self.event.set()
+            
             while arduino is None:
                 try:
                     arduino = ArduinoConnector(self)
                     print("[ALERT]    Rover & Winch     Arduino initialized")
+                    self.lock.acquire()
                     self.winch_status = 1
+                    self.lock.acquire()
                 except Exception as ex:
                     print("[ERROR]    Rover & Winch    ", ex)
 
-                print("[TEST] event set, winch_status posting 1 at time=", datetime.now().strftime("%H:%M:%S"))
-
-                time.sleep(5)
-                break
-
-            self.event.clear()
-            print("[TEST] event cleared, winch_status posting 0", datetime.now().strftime("%H:%M:%S"))
-            time.sleep(5)
-
-            self.lock.acquire()
-            self.winch_status = 2
-            print("[TEST] lock aquired, winch_status posting 2", datetime.now().strftime("%H:%M:%S"))
-
-            self.lock.release()
-
-            time.sleep(5)
-            self.winch_status = 0
-            print("[TEST] lock released, winch_status posting 0", datetime.now().strftime("%H:%M:%S"))
-
+                time.sleep(1)
 
             # Initialize target location
             target = Location(0, 0, 0)
@@ -159,9 +130,9 @@ class Vehicle:
                 # If emergency reel status initiated then send command and change status
                 if self.winch_status == 5:
                     arduino.sendCommandMessage("AIRDROPCANCEL1")
-                    lock.acquire()
+                    self.lock.acquire()
                     self.winch_status = 1
-                    lock.release()
+                    self.lock.release()
                 # Get drone location
                 try:
                     location = vehicle.get_location()
@@ -182,9 +153,9 @@ class Vehicle:
                             "[ALERT]    Rover & Winch     In target distance; Loitering")
 
                         # Send “AIRDROPBEGIN1” to the winch
-                        lock.acquire()
+                        self.lock.acquire()
                         self.winch_status = 1
-                        lock.release()
+                        self.lock.release()
 
                         arduino.sendCommandMessage("AIRDROPBEGIN1")
                         print("[START]    Rover & Winch     Starting deployment")
@@ -195,9 +166,9 @@ class Vehicle:
 
                         # Return to the mission in auto mode
                         vehicle.set_auto()
-                        lock.acquire()
+                        self.lock.acquire()
                         self.winch_status = 4
-                        lock.release()
+                        self.lock.release()
 
                         return
                 except Exception as e:
