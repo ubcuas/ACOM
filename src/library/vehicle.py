@@ -53,7 +53,7 @@ class Vehicle:
                 location = vehicle.get_location()
 
                 http = requests.Session()
-                retry = Retry(total=None, backoff_factor=1)
+                retry = Retry(total=3, backoff_factor=0.5)
                 adapter = HTTPAdapter(max_retries=retry)
                 http.mount('http://', adapter)
 
@@ -67,6 +67,7 @@ class Vehicle:
                     "chan3_raw":       vehicle.get_rc_channel(),
                     "winch_status":    self.winch_status
                 })
+                self.lock.release()
 
                 gcom_telemetry_post = http.post(
                     GCOM_TELEMETRY_ENDPOINT,
@@ -81,9 +82,6 @@ class Vehicle:
                 else:
                     print("[FAIL]     GCOM-X Telemetry  POST: " +
                           str(gcom_telemetry_post.status_code))
-
-                self.lock.release()
-
 
             except Exception as e:
                 print(
