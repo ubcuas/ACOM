@@ -3,7 +3,7 @@ lxml==4.9.2
 future==0.18.3
 pymavlink==2.4.37
 xmltodict==0.13.0
-python-dotenv==0.21.0
+python-dotenv==0.21.1
 pytest==7.2.1
 observable==1.0.3
 geographiclib==2.0
