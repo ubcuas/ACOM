@@ -45,6 +45,7 @@ jobs:
             --volume "${PWD}/ACOM:/"
 
           install: |
+            apt-get install python3
             apt install python3-pip
             pip install -r src/requirements.txt
 
