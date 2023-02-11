@@ -34,7 +34,7 @@ jobs:
 
           # Not required, but speeds up builds by storing container images in
           # a GitHub package registry.
-          githubToken: ${{ secrets.ACOM_GITHUB_TOKEN }}
+          githubToken: ${{ github.token }}
           
           # Create an ACOM directory
           setup: |
@@ -44,13 +44,14 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}/ACOM:/"
 
-          install: |
-            apt-get install python3
-            apt install python3-pip
-            pip install -r src/requirements.txt
+#           install: |
+#             apt-get install python3
+#             apt install python3-pip
+#             pip install -r src/requirements.txt
 
           # Set an output parameter `uname` for use in subsequent steps
           run: |
+            apt-get install -y python3 python3-venv python3-pip
             pytest -s
             
 #     - uses: actions/checkout@v3
