@@ -21,13 +21,16 @@ jobs:
         docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
         docker-publish-arm
   
-#   arm:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v3
-
-#     - name: Publish Docker image
-#       if: ${{ github.event_name == 'push' }}
-#       run: |
-#         docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
-#         docker-publish-arm
+  arm:
+    runs-on: [self-hosted, linux, ARM64]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker Image
+        run: make docker-arm
+      - name: Run Tests
+        run: make ci-test
+      - name: Publish Docker image
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
+          docker-publish-arm
