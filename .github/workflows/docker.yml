@@ -45,7 +45,7 @@ jobs:
             --volume "${PWD}/ACOM:/"
 
           install: |
-            python --version
+            apt install python3-pip
             pip install -r src/requirements.txt
 
           # Set an output parameter `uname` for use in subsequent steps
