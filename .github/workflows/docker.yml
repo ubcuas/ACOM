@@ -21,51 +21,11 @@ jobs:
         docker login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD"
         docker-publish-arm
   
-  arm:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: uraimo/run-on-arch-action@v2
-        name: Run Tests
-        id: runcmd
-        with:
-          arch: aarch64
-          distro: ubuntu_latest
+#   arm:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
 
-          # Not required, but speeds up builds by storing container images in
-          # a GitHub package registry.
-#           githubToken: ${{ github.token }}
-          
-          dockerRunArgs: |
-            --volume "${PWD}:/ACOM"
-            python:3
-
-#           install: |
-#             apt-get install python3
-#             apt install python3-pip
-#             pip install -r src/requirements.txt
-
-          # Set an output parameter `uname` for use in subsequent steps
-          run: |
-            ls -a
-            echo $PATH
-            python --version
-          # pytest -s
-            
-#     - uses: actions/checkout@v3
-#     - uses: pguyot/arm-runner-action@v2
-#       with:
-#         image_additional_mb: 2048
-#         cpu: cortex-a7
-#         base_image: raspios_lite:latest
-#         cpu_info: cpuinfo/raspberrypi_3b
-#         commands: |
-#           sudo apt-get -y install build-essential
-#           sudo apt -y install raspberrypi-kernel raspberrypi-kernel-headers
-#           curl -fsSL https://get.docker.com -o get-docker.sh
-#           sudo sh get-docker.sh
-#           sudo make docker-arm
-#           sudo make ci-test
 #     - name: Publish Docker image
 #       if: ${{ github.event_name == 'push' }}
 #       run: |
