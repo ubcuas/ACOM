@@ -34,7 +34,7 @@ jobs:
 
           # Not required, but speeds up builds by storing container images in
           # a GitHub package registry.
-          githubToken: $ACOM_GITHUB_TOKEN
+          githubToken: ${{ secrets.ACOM_GITHUB_TOKEN }}
           
           # Create an ACOM directory
           setup: |
