@@ -47,6 +47,8 @@ jobs:
 
           # Set an output parameter `uname` for use in subsequent steps
           run: |
+            ls -a
+            echo $PATH
             python --version
           # pytest -s
             
