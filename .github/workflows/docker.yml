@@ -37,7 +37,7 @@ jobs:
           githubToken: ${{ github.token }}
           
           dockerRunArgs: |
-            arm64v8/python:3
+            python:3
 
 #           install: |
 #             apt-get install python3
