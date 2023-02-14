@@ -43,6 +43,9 @@ class Vehicle:
         # Rover status to make sure drop is completed before rtl
         self.winch_status = 0
 
+        # locks to prevent race conditions between post_to_gcom thread and winch_automation changing winch_status
+        self.lock = threading.Lock()
+
     # Threaded: Continuously post telemetry data to GCOM-X
     def post_to_gcom(self):
         while True:
@@ -50,22 +53,27 @@ class Vehicle:
                 location = vehicle.get_location()
 
                 http = requests.Session()
-                retry = Retry(total=None, backoff_factor=1)
+                retry = Retry(total=3, backoff_factor=0.5)
                 adapter = HTTPAdapter(max_retries=retry)
                 http.mount('http://', adapter)
+
+                self.lock.acquire()
+                json_data = json.dumps({
+                    "latitude_dege7":  location["lat"]*10**7,
+                    "longitude_dege7": location["lng"]*10**7,
+                    "altitude_msl_m":  location["alt"],
+                    "heading_deg":     vehicle.get_heading(),
+                    "groundspeed_m_s": vehicle.get_speed(),
+                    "chan3_raw":       vehicle.get_rc_channel(),
+                    "winch_status":    self.winch_status
+                })
+                self.lock.release()
 
                 gcom_telemetry_post = http.post(
                     GCOM_TELEMETRY_ENDPOINT,
                     headers={'content-type': 'application/json',
                              'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:42.0) Gecko/20100101 Firefox/42.0'},
-                    data=json.dumps({
-                        "latitude_dege7":  location["lat"]*10**7,
-                        "longitude_dege7": location["lng"]*10**7,
-                        "altitude_msl_m":  location["alt"],
-                        "heading_deg":     vehicle.get_heading(),
-                        "groundspeed_m_s": vehicle.get_speed(),
-                        "chan3_raw":       vehicle.get_rc_channel()
-                    }),
+                    data=json_data,
                     timeout=3
                 )
 
@@ -85,14 +93,17 @@ class Vehicle:
     def winch_automation(self):
         if self.winch_enabled:
             arduino = None
-
+            
             while arduino is None:
                 try:
                     arduino = ArduinoConnector(self)
                     print("[ALERT]    Rover & Winch     Arduino initialized")
+                    self.lock.acquire()
                     self.winch_status = 1
+                    self.lock.acquire()
                 except Exception as ex:
                     print("[ERROR]    Rover & Winch    ", ex)
+
                 time.sleep(1)
 
             # Initialize target location
@@ -117,7 +128,9 @@ class Vehicle:
                 # If emergency reel status initiated then send command and change status
                 if self.winch_status == 5:
                     arduino.sendCommandMessage("AIRDROPCANCEL1")
+                    self.lock.acquire()
                     self.winch_status = 1
+                    self.lock.release()
                 # Get drone location
                 try:
                     location = vehicle.get_location()
@@ -138,7 +151,10 @@ class Vehicle:
                             "[ALERT]    Rover & Winch     In target distance; Loitering")
 
                         # Send “AIRDROPBEGIN1” to the winch
+                        self.lock.acquire()
                         self.winch_status = 1
+                        self.lock.release()
+
                         arduino.sendCommandMessage("AIRDROPBEGIN1")
                         print("[START]    Rover & Winch     Starting deployment")
 
@@ -148,7 +164,10 @@ class Vehicle:
 
                         # Return to the mission in auto mode
                         vehicle.set_auto()
+                        self.lock.acquire()
                         self.winch_status = 4
+                        self.lock.release()
+
                         return
                 except Exception as e:
                     print("[ERROR]    Rover & Winch     Function failure: ", e)
@@ -156,6 +175,7 @@ class Vehicle:
         else:
             print("[ALERT]    Rover & Winch     Winch disabled")
             return
+
 
     def setup_mavlink_connection(self, connection, address, port=None, baud=57600):
         if self.mavlink_connection is None or self.mavlink_connection.target_system < 1 and not self.connecting:
