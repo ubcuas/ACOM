@@ -19,7 +19,7 @@ jobs:
 #       if: ${{ github.event_name == 'push' }}
       run: |
         docker login -u "${{ secrets.DOCKER_HUB_USER }}" -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
-        docker-publish
+        make docker-publish
   
   arm:
     runs-on: [self-hosted, Linux, ARM64]
@@ -33,4 +33,4 @@ jobs:
 #         if: ${{ github.event_name == 'push' }}
         run: |
           docker login -u "${{ secrets.DOCKER_HUB_USER }}" -p "${{ secrets.DOCKER_HUB_PASSWORD }}"
-          docker-publish-arm
+          make docker-publish-arm
