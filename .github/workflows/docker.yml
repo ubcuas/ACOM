@@ -28,7 +28,7 @@ jobs:
       - name: Build Docker Image
         run: make docker-arm
       - name: Run Tests
-        run: make ci-test
+        run: make ci-test-arm
       - name: Publish Docker image
         if: ${{ github.event_name == 'push' }}
         run: |
