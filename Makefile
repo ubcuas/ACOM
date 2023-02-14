@@ -58,3 +58,6 @@ docker-publish-arm: docker-arm
 ## CI ##
 ci-test: docker run-sitl
 	docker run --rm --network acom-net ubcuas/acom:latest pytest -s
+	
+ci-test-arm: docker run-sitl-arm
+	docker run --rm --network acom-net ubcuas/acom:arm pytest -s
