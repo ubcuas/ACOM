@@ -47,7 +47,7 @@ docker:
 	docker build . --pull=true --tag ubcuas/acom:latest
 
 docker-arm:
-	docker build . --pull=true --tag ubcuas/acom:arm --platform "linux/arm/v7"
+	docker build . --pull=true --tag ubcuas/acom:arm --platform "linux/arm64"
 
 docker-publish: docker
 	docker push ubcuas/acom:latest
