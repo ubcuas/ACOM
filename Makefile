@@ -47,7 +47,7 @@ docker:
 	docker build . --pull=true --tag ubcuas/acom:latest
 
 docker-arm:
-	docker build . --pull=true --tag ubcuas/acom:arm --platform "linux/arm/v7"
+	docker build . --pull=true --tag ubcuas/acom:arm --platform "linux/arm64"
 
 docker-publish: docker
 	docker push ubcuas/acom:latest
@@ -58,3 +58,6 @@ docker-publish-arm: docker-arm
 ## CI ##
 ci-test: docker run-sitl
 	docker run --rm --network acom-net ubcuas/acom:latest pytest -s
+	
+ci-test-arm: docker-arm run-sitl-arm
+	docker run --rm --network acom-net ubcuas/acom:arm pytest -s
