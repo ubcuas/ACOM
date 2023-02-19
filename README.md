@@ -1,4 +1,4 @@
-[![License: MIT](https://img.shields.io/github/license/vintasoftware/django-react-boilerplate.svg)](LICENSE.txt)
+[![License: MIT](https://img.shields.io/github/license/vintasoftware/django-react-boilerplate.svg)](LICENSE)
 [![Docker CI](https://github.com/ubcuas/ACOM/actions/workflows/docker.yml/badge.svg)](https://github.com/ubcuas/ACOM/actions/workflows/docker.yml)
 
 # UBC UAS ACOM
