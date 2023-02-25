@@ -24,7 +24,7 @@ run-sitl-wait: run-sitl
 run-sitl-arm: stop-sitl run-dependencies
 	docker run --rm -d -p 5760-5780:5760-5780 --network acom-net --name acom-sitl ubcuas/uasitl:arm
 
-run-sitl-wait: run-sitl-arm
+run-sitl-wait-arm: run-sitl-arm
 	sleep 30
 
 run-acom: docker run-dependencies

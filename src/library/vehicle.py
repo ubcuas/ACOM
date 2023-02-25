@@ -64,7 +64,7 @@ class Vehicle:
                     "altitude_msl_m":  location["alt"],
                     "heading_deg":     vehicle.get_heading(),
                     "groundspeed_m_s": vehicle.get_speed(),
-                    "chan3_raw":       vehicle.get_rc_channel(),
+                    # "chan3_raw":       vehicle.get_rc_channel(),
                     "winch_status":    self.winch_status
                 })
                 self.lock.release()
@@ -279,9 +279,9 @@ class Vehicle:
         self.telemetry.wait('GLOBAL_POSITION_INT')
         return self.telemetry.heading
 
-    def get_rc_channel(self):
-        self.telemetry.wait('RC_CHANNELS_RAW')
-        return self.telemetry.chan3_raw
+    # def get_rc_channel(self):
+    #     self.telemetry.wait('RC_CHANNELS_RAW')
+    #     return self.telemetry.chan3_raw
 
     def fly_to(self, lat, lng, alt):
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
