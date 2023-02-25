@@ -177,9 +177,9 @@ class Telemetry:
             self.lat = msg.lat * 1.0e-7
             self.lng = msg.lon * 1.0e-7
 
-        @self.event.on("RC_CHANNELS_RAW")
-        def rc_listener(msg):
-            self.chan3_raw = msg.chan3_raw
+        # @self.event.on("RC_CHANNELS_RAW")
+        # def rc_listener(msg):
+        #     self.chan3_raw = msg.chan3_raw
 
         # @self.event.on("SCALED_PRESSURE")
         # def alt_listener(msg):
