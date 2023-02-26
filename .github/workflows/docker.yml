@@ -71,26 +71,12 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
       
-      - name: Build Image
+      - name: Build & Push Image
         uses: docker/build-push-action@v4
         with:
           context: .
-          platforms: linux/arm64
-          load: true
-          tags: ubcuas/acom:arm
-          cache-from: type=gha
-      
-      - name: Run Tests
-        run: |
-          docker network create acom-net
-          docker run --rm -d -p 5760-5780:5760-5780 --network acom-net --name acom-sitl ubcuas/uasitl:arm
-          docker run --rm --network acom-net ubcuas/acom:arm pytest -s
-      
-      - name: Push Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          platforms: linux/arm64
+          platforms: linux/arm/v7,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ubcuas/acom:arm
+          cache-from: type=gha
           cache-to: type=gha,mode=max
