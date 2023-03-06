@@ -7,6 +7,9 @@ updates:
     directory: "/src"
     schedule:
       interval: "weekly"
+      day: "saturday"
+      time: "03:00"
+      timezone: "America/Vancouver"
     insecure-external-code-execution: deny
     labels:
       - "Priority: Medium"
