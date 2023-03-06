@@ -1,4 +1,5 @@
-[![License: MIT](https://img.shields.io/github/license/vintasoftware/django-react-boilerplate.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/vintasoftware/django-react-boilerplate.svg?label=License&labelColor=323940)](LICENSE)
+[![Docker](https://badgen.net/badge/icon/Docker%20Hub?icon=docker&label&labelColor=323940)](https://hub.docker.com/r/ubcuas/acom/tags)
 [![Docker CI](https://github.com/ubcuas/ACOM/actions/workflows/docker.yml/badge.svg)](https://github.com/ubcuas/ACOM/actions/workflows/docker.yml)
 
 # UBC UAS ACOM
@@ -14,12 +15,14 @@ Air Communication (ACOM) is the aircraft's on-board software that will be accept
 
 For x86:
 ```shell
-make run
+ArduCopter: make run-copter
+ArduPlane: make run-plane
 ```
 
 For ARM:
 ```shell
-$ make run-arm
+ArduCopter: $ make run-copter-arm
+ArduPlane: $ make run-plane-arm
 ```
 
 See the [`Makefile`](Makefile) for other run options
@@ -78,21 +81,22 @@ Docker containers do not have access to serial devices out of the box. Because o
 - Find the name of your serial device (ex. COM8 on Windows || /dev/ttyACM0 on Linux )
 - You will need to add the following flag to the Makefile: "--device DEVICENAME"
 
-Example: 'run-acom-arm' without serial devices:
+Example: 'run-acom-copter-arm' without serial devices:
 ```bash
-run-acom-arm: docker-arm run-dependencies
-	docker run --rm -it -p 5000:5000 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
+run-acom-copter-arm: docker-arm run-dependencies
+	docker run --rm -it -p 5000:5000 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:copter-arm
 ```
-Example Continued: 'run-acom-arm' with access to '/dev/ttyACM0'
+Example Continued: 'run-acom-copter-arm' with access to '/dev/ttyACM0'
 ```bash
-run-acom-arm: docker-arm run-dependencies
-	docker run --rm -it -p 5000:5000 --device /dev/ttyACM0 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:arm
+run-acom-copter-arm: docker-arm run-dependencies
+	docker run --rm -it -p 5000:5000 --device /dev/ttyACM0 --network acom-net --add-host host.docker.internal:host-gateway --name acom-acom ubcuas/acom:copter-arm
 ```
 NOTE: There is no simple way to access serial devices via Docker Desktop on Mac. This is an [open issue](https://github.com/docker/for-mac/issues/900) 😭
 ## Testing
 - Run tests for the whole ACOM flask server:
 ```shell
-$ make ci-test
+ArduCopter: $ make ci-test-copter
+ArduPlane: $ make ci-test-plane
 ```
 
 **Server URL**
@@ -101,11 +105,11 @@ $ make ci-test
 
 but it ultimately depends on what the Flask development URL binds itself to, look in the terminal after running
 ```
-make run
+make run-[copter/plane]
 ```
 
 ## Troubleshooting
 
 `[Errno -2] Name or service not known sleeping`
-> When you run acom without uas-sitl, then you will have this error as it tries to connect to SITL through mavlink, but it can't find the address. To fix it, run SITL using `make run-sitl` or kill all the acom containers and run `make run`.
+> When you run acom without uas-sitl, then you will have this error as it tries to connect to SITL through mavlink, but it can't find the address. To fix it, run SITL using `make run-sitl-[copter/plane]` or kill all the acom containers and run `make run-[copter/plane]`.
 
