@@ -40,12 +40,13 @@ jobs:
         docker network create acom-net
         docker run --rm -d -p 5760-5780:5760-5780 --network acom-net --name acom-sitl ubcuas/uasitl:copter
         docker run --rm --network acom-net ubcuas/acom:latest pytest -s
+        docker kill acom-sitl
       
     - name: Run Plane Tests
       run: |
-        docker network create acom-net
         docker run --rm -d -p 5760-5780:5760-5780 --network acom-net --name acom-sitl ubcuas/uasitl:plane
         docker run --rm --network acom-net ubcuas/acom:latest pytest -s
+        docker kill acom-sitl
     
     - name: Push Image
       uses: docker/build-push-action@v4
