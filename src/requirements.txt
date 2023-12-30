@@ -1,5 +1,5 @@
 Flask==3.0.0
-lxml==4.9.4
+lxml==5.0.0
 future==0.18.3
 pymavlink==2.4.41
 xmltodict==0.13.0
