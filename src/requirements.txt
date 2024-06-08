@@ -7,6 +7,6 @@ python-dotenv==1.0.1
 pytest==8.2.2
 observable==1.0.3
 geographiclib==2.0
-requests==2.32.2
+requests==2.32.3
 pyserial==3.5
 pytimedinput==2.0.1
